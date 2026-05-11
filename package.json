@@ -95,6 +95,7 @@
       "!**/*.repository.interface.ts"
     ],
     "coverageDirectory": "../coverage",
+    "coverageReporters": ["text-summary", "lcov"],
     "coverageThreshold": {
       "global": {
         "branches": 80,
