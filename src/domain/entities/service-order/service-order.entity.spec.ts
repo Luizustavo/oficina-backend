@@ -1,7 +1,7 @@
-import { ServiceOrder } from './service-order.entity';
-import { ServiceOrderStatus } from '../../value-objects/service-order-status.value-object';
-import { DomainException } from '../../../shared/exceptions/domain.exceptions';
-import { InvalidStatusTransitionException } from '../../../shared/exceptions/domain.exceptions';
+import { InvalidStatusTransitionException } from '@shared/exceptions/domain.exceptions';
+import { ServiceOrderEntity } from './service-order.entity';
+import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
+import { DomainException } from '@shared/exceptions/domain.exceptions';
 
 const validProps = {
   id: 'so-1',
@@ -14,7 +14,7 @@ const validProps = {
 describe('ServiceOrder', () => {
   describe('create', () => {
     it('should create a service order with RECEIVED status', () => {
-      const so = ServiceOrder.create(validProps);
+      const so = ServiceOrderEntity.create(validProps);
       expect(so.id).toBe('so-1');
       expect(so.status).toBe(ServiceOrderStatus.RECEIVED);
       expect(so.services).toHaveLength(0);
@@ -24,39 +24,39 @@ describe('ServiceOrder', () => {
 
     it('should throw DomainException for empty problem description', () => {
       expect(() =>
-        ServiceOrder.create({ ...validProps, problemDescription: '' }),
+        ServiceOrderEntity.create({ ...validProps, problemDescription: '' }),
       ).toThrow(DomainException);
     });
 
     it('should throw DomainException for missing customerId', () => {
       expect(() =>
-        ServiceOrder.create({ ...validProps, customerId: '' }),
+        ServiceOrderEntity.create({ ...validProps, customerId: '' }),
       ).toThrow(DomainException);
     });
 
     it('should throw DomainException for missing vehicleId', () => {
       expect(() =>
-        ServiceOrder.create({ ...validProps, vehicleId: '' }),
+        ServiceOrderEntity.create({ ...validProps, vehicleId: '' }),
       ).toThrow(DomainException);
     });
   });
 
   describe('status transitions', () => {
     it('should transition RECEIVED → IN_DIAGNOSIS', () => {
-      const so = ServiceOrder.create(validProps);
+      const so = ServiceOrderEntity.create(validProps);
       so.startDiagnosis();
       expect(so.status).toBe(ServiceOrderStatus.IN_DIAGNOSIS);
     });
 
     it('should transition IN_DIAGNOSIS → AWAITING_APPROVAL', () => {
-      const so = ServiceOrder.create(validProps);
+      const so = ServiceOrderEntity.create(validProps);
       so.startDiagnosis();
       so.requestApproval();
       expect(so.status).toBe(ServiceOrderStatus.AWAITING_APPROVAL);
     });
 
     it('should transition AWAITING_APPROVAL → IN_PROGRESS and record timestamps', () => {
-      const so = ServiceOrder.create(validProps);
+      const so = ServiceOrderEntity.create(validProps);
       so.startDiagnosis();
       so.requestApproval();
       so.approve();
@@ -66,7 +66,7 @@ describe('ServiceOrder', () => {
     });
 
     it('should transition IN_PROGRESS → COMPLETED and record finishedAt', () => {
-      const so = ServiceOrder.create(validProps);
+      const so = ServiceOrderEntity.create(validProps);
       so.startDiagnosis();
       so.requestApproval();
       so.approve();
@@ -76,7 +76,7 @@ describe('ServiceOrder', () => {
     });
 
     it('should transition COMPLETED → DELIVERED and record deliveredAt', () => {
-      const so = ServiceOrder.create(validProps);
+      const so = ServiceOrderEntity.create(validProps);
       so.startDiagnosis();
       so.requestApproval();
       so.approve();
@@ -87,18 +87,18 @@ describe('ServiceOrder', () => {
     });
 
     it('should allow canceling from RECEIVED', () => {
-      const so = ServiceOrder.create(validProps);
+      const so = ServiceOrderEntity.create(validProps);
       so.cancel();
       expect(so.status).toBe(ServiceOrderStatus.CANCELED);
     });
 
     it('should throw when attempting an invalid transition', () => {
-      const so = ServiceOrder.create(validProps);
+      const so = ServiceOrderEntity.create(validProps);
       expect(() => so.complete()).toThrow(InvalidStatusTransitionException);
     });
 
     it('should throw when trying to transition from DELIVERED', () => {
-      const so = ServiceOrder.create(validProps);
+      const so = ServiceOrderEntity.create(validProps);
       so.startDiagnosis();
       so.requestApproval();
       so.approve();
@@ -110,7 +110,7 @@ describe('ServiceOrder', () => {
 
   describe('addService', () => {
     it('should add a service and recalculate total', () => {
-      const so = ServiceOrder.create(validProps);
+      const so = ServiceOrderEntity.create(validProps);
       so.addService({
         serviceId: 's-1',
         serviceName: 'Troca de Óleo',
@@ -122,7 +122,7 @@ describe('ServiceOrder', () => {
     });
 
     it('should throw DomainException when adding service to a non-modifiable order', () => {
-      const so = ServiceOrder.create(validProps);
+      const so = ServiceOrderEntity.create(validProps);
       so.startDiagnosis();
       so.requestApproval();
       so.approve();
@@ -139,7 +139,7 @@ describe('ServiceOrder', () => {
 
   describe('addPart', () => {
     it('should add a part and recalculate total', () => {
-      const so = ServiceOrder.create(validProps);
+      const so = ServiceOrderEntity.create(validProps);
       so.addPart({
         partId: 'p-1',
         partName: 'Filtro',
@@ -153,7 +153,7 @@ describe('ServiceOrder', () => {
     });
 
     it('should throw DomainException when adding part to a non-modifiable order', () => {
-      const so = ServiceOrder.create(validProps);
+      const so = ServiceOrderEntity.create(validProps);
       so.startDiagnosis();
       so.requestApproval();
       so.approve();
@@ -172,12 +172,11 @@ describe('ServiceOrder', () => {
 
   describe('canModifyItems', () => {
     it('should return true for RECEIVED, IN_DIAGNOSIS, and AWAITING_APPROVAL', () => {
-      const received = ServiceOrder.create(validProps);
+      const received = ServiceOrderEntity.create(validProps);
       expect(received.canModifyItems()).toBe(true);
 
-      const inDiagnosis = ServiceOrder.create({
+      const inDiagnosis = ServiceOrderEntity.create({
         ...validProps,
-        id: 'so-2',
         orderNumber: 'OS-002',
       });
       inDiagnosis.startDiagnosis();
@@ -185,7 +184,7 @@ describe('ServiceOrder', () => {
     });
 
     it('should return false for IN_PROGRESS', () => {
-      const so = ServiceOrder.create(validProps);
+      const so = ServiceOrderEntity.create(validProps);
       so.startDiagnosis();
       so.requestApproval();
       so.approve();

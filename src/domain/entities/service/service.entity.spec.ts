@@ -1,5 +1,5 @@
-import { Service } from './service.entity';
-import { DomainException } from '../../../shared/exceptions/domain.exceptions';
+import { DomainException } from '@shared/exceptions/domain.exceptions';
+import { ServiceEntity } from './service.entity';
 
 const validProps = {
   id: '1',
@@ -11,7 +11,7 @@ const validProps = {
 describe('Service', () => {
   describe('create', () => {
     it('should create a service with valid props', () => {
-      const service = Service.create(validProps);
+      const service = ServiceEntity.create(validProps);
       expect(service.id).toBe('1');
       expect(service.name).toBe('Troca de Óleo');
       expect(service.isActive).toBe(true);
@@ -19,33 +19,36 @@ describe('Service', () => {
     });
 
     it('should throw DomainException for empty name', () => {
-      expect(() => Service.create({ ...validProps, name: '' })).toThrow(
+      expect(() => ServiceEntity.create({ ...validProps, name: '' })).toThrow(
         DomainException,
       );
     });
 
     it('should throw DomainException for non-positive price', () => {
-      expect(() => Service.create({ ...validProps, price: 0 })).toThrow(
+      expect(() => ServiceEntity.create({ ...validProps, price: 0 })).toThrow(
         DomainException,
       );
-      expect(() => Service.create({ ...validProps, price: -10 })).toThrow(
+      expect(() => ServiceEntity.create({ ...validProps, price: -10 })).toThrow(
         DomainException,
       );
     });
 
     it('should throw DomainException for non-positive estimated duration', () => {
       expect(() =>
-        Service.create({ ...validProps, estimatedDurationMinutes: 0 }),
+        ServiceEntity.create({ ...validProps, estimatedDurationMinutes: 0 }),
       ).toThrow(DomainException);
       expect(() =>
-        Service.create({ ...validProps, estimatedDurationMinutes: -5 }),
+        ServiceEntity.create({
+          ...validProps,
+          estimatedDurationMinutes: -5,
+        }),
       ).toThrow(DomainException);
     });
   });
 
   describe('update', () => {
     it('should update name, price, and duration', () => {
-      const service = Service.create(validProps);
+      const service = ServiceEntity.create(validProps);
       service.update({
         name: 'Alinhamento',
         price: 120.0,
@@ -57,17 +60,17 @@ describe('Service', () => {
     });
 
     it('should throw DomainException when updating name to empty string', () => {
-      const service = Service.create(validProps);
+      const service = ServiceEntity.create(validProps);
       expect(() => service.update({ name: '' })).toThrow(DomainException);
     });
 
     it('should throw DomainException when updating price to zero', () => {
-      const service = Service.create(validProps);
+      const service = ServiceEntity.create(validProps);
       expect(() => service.update({ price: 0 })).toThrow(DomainException);
     });
 
     it('should throw DomainException when updating duration to zero', () => {
-      const service = Service.create(validProps);
+      const service = ServiceEntity.create(validProps);
       expect(() => service.update({ estimatedDurationMinutes: 0 })).toThrow(
         DomainException,
       );
@@ -76,14 +79,14 @@ describe('Service', () => {
 
   describe('toggleActive', () => {
     it('should deactivate an active service', () => {
-      const service = Service.create(validProps);
+      const service = ServiceEntity.create(validProps);
       expect(service.isActive).toBe(true);
       service.toggleActive();
       expect(service.isActive).toBe(false);
     });
 
     it('should re-activate an inactive service', () => {
-      const service = Service.create(validProps);
+      const service = ServiceEntity.create(validProps);
       service.toggleActive();
       service.toggleActive();
       expect(service.isActive).toBe(true);

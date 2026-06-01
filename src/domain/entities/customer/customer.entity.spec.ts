@@ -1,6 +1,6 @@
-import { Customer } from './customer.entity';
-import { CustomerType } from '../../enums/customer-type.enum';
-import { DomainException } from '../../../shared/exceptions/domain.exceptions';
+import { DomainException } from '@shared/exceptions/domain.exceptions';
+import { CustomerEntity } from './customer.entity';
+import { CustomerType } from '@domain/enums/customer-type.enum';
 
 const validIndividualProps = {
   id: '1',
@@ -23,7 +23,7 @@ const validCompanyProps = {
 describe('Customer', () => {
   describe('create', () => {
     it('should create an INDIVIDUAL customer with valid props', () => {
-      const customer = Customer.create(validIndividualProps);
+      const customer = CustomerEntity.create(validIndividualProps);
       expect(customer.id).toBe('1');
       expect(customer.name).toBe('Carlos Silva');
       expect(customer.type).toBe(CustomerType.INDIVIDUAL);
@@ -32,32 +32,35 @@ describe('Customer', () => {
     });
 
     it('should create a COMPANY customer with valid props', () => {
-      const customer = Customer.create(validCompanyProps);
+      const customer = CustomerEntity.create(validCompanyProps);
       expect(customer.type).toBe(CustomerType.COMPANY);
       expect(customer.document).toBe('11222333000181');
     });
 
     it('should throw DomainException for an empty name', () => {
       expect(() =>
-        Customer.create({ ...validIndividualProps, name: '' }),
+        CustomerEntity.create({ ...validIndividualProps, name: '' }),
       ).toThrow(DomainException);
     });
 
     it('should throw DomainException for a name shorter than 2 characters', () => {
       expect(() =>
-        Customer.create({ ...validIndividualProps, name: 'A' }),
+        CustomerEntity.create({ ...validIndividualProps, name: 'A' }),
       ).toThrow(DomainException);
     });
 
     it('should throw DomainException for an invalid email', () => {
       expect(() =>
-        Customer.create({ ...validIndividualProps, email: 'not-an-email' }),
+        CustomerEntity.create({
+          ...validIndividualProps,
+          email: 'not-an-email',
+        }),
       ).toThrow(DomainException);
     });
 
     it('should throw DomainException for an empty phone', () => {
       expect(() =>
-        Customer.create({ ...validIndividualProps, phone: '' }),
+        CustomerEntity.create({ ...validIndividualProps, phone: '' }),
       ).toThrow(DomainException);
     });
   });
@@ -65,7 +68,7 @@ describe('Customer', () => {
   describe('reconstitute', () => {
     it('should reconstitute a customer from persisted props', () => {
       const now = new Date();
-      const customer = Customer.reconstitute({
+      const customer = CustomerEntity.reconstitute({
         ...validIndividualProps,
         createdAt: now,
         updatedAt: now,
@@ -77,26 +80,26 @@ describe('Customer', () => {
 
   describe('update', () => {
     it('should update the name', () => {
-      const customer = Customer.create(validIndividualProps);
+      const customer = CustomerEntity.create(validIndividualProps);
       customer.update({ name: 'New Name' });
       expect(customer.name).toBe('New Name');
     });
 
     it('should update the email', () => {
-      const customer = Customer.create(validIndividualProps);
+      const customer = CustomerEntity.create(validIndividualProps);
       customer.update({ email: 'newemail@test.com' });
       expect(customer.email).toBe('newemail@test.com');
     });
 
     it('should throw DomainException when updating with invalid email', () => {
-      const customer = Customer.create(validIndividualProps);
+      const customer = CustomerEntity.create(validIndividualProps);
       expect(() => customer.update({ email: 'bad-email' })).toThrow(
         DomainException,
       );
     });
 
     it('should throw DomainException when updating with name too short', () => {
-      const customer = Customer.create(validIndividualProps);
+      const customer = CustomerEntity.create(validIndividualProps);
       expect(() => customer.update({ name: 'X' })).toThrow(DomainException);
     });
   });

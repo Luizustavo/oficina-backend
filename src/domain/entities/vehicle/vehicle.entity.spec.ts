@@ -1,5 +1,5 @@
-import { Vehicle } from './vehicle.entity';
-import { DomainException } from '../../../shared/exceptions/domain.exceptions';
+import { DomainException } from '@shared/exceptions/domain.exceptions';
+import { VehicleEntity } from './vehicle.entity';
 
 const validProps = {
   id: '1',
@@ -14,7 +14,7 @@ const validProps = {
 describe('Vehicle', () => {
   describe('create', () => {
     it('should create a vehicle with valid props', () => {
-      const vehicle = Vehicle.create(validProps);
+      const vehicle = VehicleEntity.create(validProps);
       expect(vehicle.id).toBe('1');
       expect(vehicle.licensePlate).toBe('ABC1234');
       expect(vehicle.brand).toBe('Toyota');
@@ -22,7 +22,7 @@ describe('Vehicle', () => {
     });
 
     it('should normalize license plate to uppercase', () => {
-      const vehicle = Vehicle.create({
+      const vehicle = VehicleEntity.create({
         ...validProps,
         licensePlate: 'abc1234',
       });
@@ -30,7 +30,7 @@ describe('Vehicle', () => {
     });
 
     it('should accept Mercosul plates', () => {
-      const vehicle = Vehicle.create({
+      const vehicle = VehicleEntity.create({
         ...validProps,
         licensePlate: 'ABC1D23',
       });
@@ -38,31 +38,31 @@ describe('Vehicle', () => {
     });
 
     it('should throw DomainException for empty brand', () => {
-      expect(() => Vehicle.create({ ...validProps, brand: '' })).toThrow(
+      expect(() => VehicleEntity.create({ ...validProps, brand: '' })).toThrow(
         DomainException,
       );
     });
 
     it('should throw DomainException for empty model', () => {
-      expect(() => Vehicle.create({ ...validProps, model: '' })).toThrow(
+      expect(() => VehicleEntity.create({ ...validProps, model: '' })).toThrow(
         DomainException,
       );
     });
 
     it('should throw DomainException for missing customerId', () => {
-      expect(() => Vehicle.create({ ...validProps, customerId: '' })).toThrow(
-        DomainException,
-      );
+      expect(() =>
+        VehicleEntity.create({ ...validProps, customerId: '' }),
+      ).toThrow(DomainException);
     });
 
     it('should throw DomainException for year before 1900', () => {
-      expect(() => Vehicle.create({ ...validProps, year: 1800 })).toThrow(
+      expect(() => VehicleEntity.create({ ...validProps, year: 1800 })).toThrow(
         DomainException,
       );
     });
 
     it('should throw DomainException for year far in the future', () => {
-      expect(() => Vehicle.create({ ...validProps, year: 9999 })).toThrow(
+      expect(() => VehicleEntity.create({ ...validProps, year: 9999 })).toThrow(
         DomainException,
       );
     });
@@ -70,7 +70,7 @@ describe('Vehicle', () => {
 
   describe('update', () => {
     it('should update brand, model, year, and color', () => {
-      const vehicle = Vehicle.create(validProps);
+      const vehicle = VehicleEntity.create(validProps);
       vehicle.update({
         brand: 'Honda',
         model: 'Civic',
@@ -84,17 +84,17 @@ describe('Vehicle', () => {
     });
 
     it('should throw DomainException when updating brand to empty string', () => {
-      const vehicle = Vehicle.create(validProps);
+      const vehicle = VehicleEntity.create(validProps);
       expect(() => vehicle.update({ brand: '' })).toThrow(DomainException);
     });
 
     it('should throw DomainException when updating model to empty string', () => {
-      const vehicle = Vehicle.create(validProps);
+      const vehicle = VehicleEntity.create(validProps);
       expect(() => vehicle.update({ model: '' })).toThrow(DomainException);
     });
 
     it('should throw DomainException when updating year to invalid value', () => {
-      const vehicle = Vehicle.create(validProps);
+      const vehicle = VehicleEntity.create(validProps);
       expect(() => vehicle.update({ year: 1800 })).toThrow(DomainException);
     });
   });
