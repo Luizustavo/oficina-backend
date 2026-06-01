@@ -1,5 +1,4 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import {
   IServiceOrderRepository,
   SERVICE_ORDER_REPOSITORY,
@@ -104,7 +103,7 @@ export class CreateServiceOrderUseCase {
       vehicleId: dto.vehicleId,
       problemDescription: dto.problemDescription,
       notes: dto.notes,
-    }, randomUUID());
+    });
 
     const created = await this.orderRepository.create(order);
     return toResponse(created);

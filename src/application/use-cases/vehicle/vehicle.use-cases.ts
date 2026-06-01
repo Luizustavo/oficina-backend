@@ -1,5 +1,4 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import {
   IVehicleRepository,
   VEHICLE_REPOSITORY,
@@ -53,7 +52,7 @@ export class CreateVehicleUseCase {
       model: dto.model,
       year: dto.year,
       color: dto.color,
-    }, randomUUID());
+    });
 
     const created = await this.vehicleRepository.create(vehicle);
     return this.toResponse(created);
