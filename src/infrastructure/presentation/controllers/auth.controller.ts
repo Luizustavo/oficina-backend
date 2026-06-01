@@ -1,30 +1,30 @@
-import { Controller, Post, Body, Get, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { LoginUseCase } from '../../../application/use-cases/auth/login.use-case';
-import { RefreshTokenUseCase } from '../../../application/use-cases/auth/refresh-token.use-case';
-import { CreateUserUseCase } from '../../../application/use-cases/auth/create-user.use-case';
-import { Public } from '../decorators/public.decorator';
-import { Roles } from '../decorators/roles.decorator';
-import { CurrentUser, JwtPayload } from '../decorators/current-user.decorator';
-import { UserRole } from '../../../domain/user/user-role.enum';
 import {
   IUserRepository,
   USER_REPOSITORY,
-} from '../../../domain/user/user.repository.interface';
-import { Inject } from '@nestjs/common';
+} from '@domain/repositories/user.repository.interface';
 import {
-  LoginRequestDto,
   RefreshTokenRequestDto,
   CreateUserRequestDto,
-} from '../../../application/dtos/request/auth.dto';
+  LoginRequestDto,
+} from '@application/dtos/request/auth.dto';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Post, Body, Get } from '@nestjs/common';
+import { CurrentUser, JwtPayload } from '../decorators/current-user.decorator';
+import { RefreshTokenUseCase } from '@application/use-cases/auth/refresh-token.use-case';
+import { CreateUserUseCase } from '@application/use-cases/auth/create-user.use-case';
+import { LoginUseCase } from '@application/use-cases/auth/login.use-case';
+import { UserRole } from '@domain/enums/user-role.enum';
+import { Public } from '../decorators/public.decorator';
+import { Roles } from '../decorators/roles.decorator';
+import { Inject } from '@nestjs/common';
 
 @ApiTags('auth')
 @Controller('api/auth')
 export class AuthController {
   constructor(
-    private readonly loginUseCase: LoginUseCase,
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly createUserUseCase: CreateUserUseCase,
+    private readonly loginUseCase: LoginUseCase,
     @Inject(USER_REPOSITORY) private readonly userRepository: IUserRepository,
   ) {}
 

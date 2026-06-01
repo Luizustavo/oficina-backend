@@ -15,18 +15,18 @@ import {
   TrackServiceOrderUseCase,
   GetAverageExecutionTimeUseCase,
 } from './service-order.use-cases';
-import { IServiceOrderRepository } from '../../../domain/service-order/service-order.repository.interface';
-import { ICustomerRepository } from '../../../domain/customer/customer.repository.interface';
-import { IVehicleRepository } from '../../../domain/vehicle/vehicle.repository.interface';
-import { IPartRepository } from '../../../domain/part/part.repository.interface';
-import { ServiceOrder } from '../../../domain/service-order/service-order.entity';
+import { IServiceOrderRepository } from '../../../domain/repositories/service-order.repository.interface';
+import { ICustomerRepository } from '../../../domain/repositories/customer.repository.interface';
+import { IVehicleRepository } from '../../../domain/repositories/vehicle.repository.interface';
+import { IPartRepository } from '../../../domain/repositories/part.repository.interface';
+import { ServiceOrder } from '../../../domain/entities/service-order/service-order.entity';
 import { ServiceOrderStatus } from '../../../domain/value-objects/service-order-status.value-object';
 import {
   NotFoundException,
   InsufficientStockException,
   BusinessRuleException,
 } from '../../../shared/exceptions/domain.exceptions';
-import { Part } from '../../../domain/part/part.entity';
+import { Part } from '../../../domain/entities/part/part.entity';
 
 const makeOrderRepo = (): jest.Mocked<IServiceOrderRepository> => ({
   create: jest.fn(),
@@ -214,7 +214,7 @@ describe('AddServiceToOrderUseCase', () => {
     orderRepo.findById.mockResolvedValue(order);
     orderRepo.update.mockImplementation(async (o) => o);
 
-    const { Service } = await import('../../../domain/service/service.entity');
+    const { Service } = await import('../../../domain/entities/service/service.entity');
     const service = Service.reconstitute({
       id: 'svc-1',
       name: 'Troca de Óleo',

@@ -2,7 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import {
   ICustomerRepository,
   CUSTOMER_REPOSITORY,
-} from '../../../domain/customer/customer.repository.interface';
+} from '../../../domain/repositories/customer.repository.interface';
 import {
   NotFoundException,
   BusinessRuleException,

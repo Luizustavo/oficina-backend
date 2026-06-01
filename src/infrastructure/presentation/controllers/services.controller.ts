@@ -1,28 +1,28 @@
 import {
   Controller,
-  Get,
-  Post,
-  Patch,
   Delete,
-  Body,
   Param,
   Query,
+  Patch,
+  Post,
+  Body,
+  Get,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { Roles } from '../decorators/roles.decorator';
-import { UserRole } from '../../../domain/user/user-role.enum';
 import {
   CreateServiceUseCase,
-  GetServiceUseCase,
-  ListServicesUseCase,
   UpdateServiceUseCase,
   ToggleServiceUseCase,
   DeleteServiceUseCase,
-} from '../../../application/use-cases/service/service.use-cases';
+  ListServicesUseCase,
+  GetServiceUseCase,
+} from '@application/use-cases/service/service.use-cases';
 import {
   CreateServiceRequestDto,
   UpdateServiceRequestDto,
-} from '../../../application/dtos/request/service.dto';
+} from '@application/dtos/request/service.dto';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { UserRole } from '@domain/enums/user-role.enum';
+import { Roles } from '../decorators/roles.decorator';
 
 @ApiTags('services')
 @ApiBearerAuth()
@@ -30,11 +30,11 @@ import {
 export class ServicesController {
   constructor(
     private readonly createService: CreateServiceUseCase,
-    private readonly getService: GetServiceUseCase,
-    private readonly listServices: ListServicesUseCase,
     private readonly updateService: UpdateServiceUseCase,
     private readonly toggleService: ToggleServiceUseCase,
     private readonly deleteService: DeleteServiceUseCase,
+    private readonly listServices: ListServicesUseCase,
+    private readonly getService: GetServiceUseCase,
   ) {}
 
   @Post()

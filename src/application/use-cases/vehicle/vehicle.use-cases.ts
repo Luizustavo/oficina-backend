@@ -3,12 +3,12 @@ import { randomUUID } from 'crypto';
 import {
   IVehicleRepository,
   VEHICLE_REPOSITORY,
-} from '../../../domain/vehicle/vehicle.repository.interface';
+} from '../../../domain/repositories/vehicle.repository.interface';
 import {
   ICustomerRepository,
   CUSTOMER_REPOSITORY,
-} from '../../../domain/customer/customer.repository.interface';
-import { Vehicle } from '../../../domain/vehicle/vehicle.entity';
+} from '../../../domain/repositories/customer.repository.interface';
+import { VehicleEntity } from '../../../domain/entities/vehicle/vehicle.entity';
 import {
   ConflictException,
   NotFoundException,
@@ -46,21 +46,20 @@ export class CreateVehicleUseCase {
       );
     }
 
-    const vehicle = Vehicle.create({
-      id: randomUUID(),
+    const vehicle = VehicleEntity.create({
       customerId: dto.customerId,
       licensePlate: dto.licensePlate,
       brand: dto.brand,
       model: dto.model,
       year: dto.year,
       color: dto.color,
-    });
+    }, randomUUID());
 
     const created = await this.vehicleRepository.create(vehicle);
     return this.toResponse(created);
   }
 
-  toResponse(vehicle: Vehicle): VehicleResponseDto {
+  toResponse(vehicle: VehicleEntity): VehicleResponseDto {
     return {
       id: vehicle.id,
       customerId: vehicle.customerId,

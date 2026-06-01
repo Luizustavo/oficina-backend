@@ -7,9 +7,9 @@ import {
   UpdateCustomerUseCase,
   DeleteCustomerUseCase,
 } from './update-customer.use-case';
-import { ICustomerRepository } from '../../../domain/customer/customer.repository.interface';
-import { Customer } from '../../../domain/customer/customer.entity';
-import { CustomerType } from '../../../domain/customer/customer-type.enum';
+import { ICustomerRepository } from '../../../domain/repositories/customer.repository.interface';
+import { Customer } from '../../../domain/entities/customer/customer.entity';
+import { CustomerType } from '../../../domain/enums/customer-type.enum';
 import {
   NotFoundException,
   BusinessRuleException,

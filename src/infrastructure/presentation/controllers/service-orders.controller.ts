@@ -1,60 +1,60 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Body,
-  Param,
-  Query,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { Roles } from '../decorators/roles.decorator';
-import { Public } from '../decorators/public.decorator';
-import { UserRole } from '../../../domain/user/user-role.enum';
-import { ServiceOrderStatus } from '../../../domain/value-objects/service-order-status.value-object';
-import {
-  CreateServiceOrderUseCase,
-  GetServiceOrderUseCase,
-  ListServiceOrdersUseCase,
   ListServiceOrdersByCustomerUseCase,
   ListServiceOrdersByStatusUseCase,
+  GetAverageExecutionTimeUseCase,
+  CreateServiceOrderUseCase,
+  ListServiceOrdersUseCase,
   AddServiceToOrderUseCase,
+  TrackServiceOrderUseCase,
+  GetServiceOrderUseCase,
+  RequestApprovalUseCase,
   AddPartToOrderUseCase,
   StartDiagnosisUseCase,
-  RequestApprovalUseCase,
   ApproveOrderUseCase,
   CompleteOrderUseCase,
   DeliverOrderUseCase,
   CancelOrderUseCase,
-  TrackServiceOrderUseCase,
-  GetAverageExecutionTimeUseCase,
-} from '../../../application/use-cases/service-order/service-order.use-cases';
+} from '@application/use-cases/service-order/service-order.use-cases';
+import {
+  Controller,
+  Query,
+  Param,
+  Patch,
+  Post,
+  Body,
+  Get,
+} from '@nestjs/common';
 import {
   CreateServiceOrderRequestDto,
   AddServiceRequestDto,
   AddPartRequestDto,
-} from '../../../application/dtos/request/service-order.dto';
+} from '@application/dtos/request/service-order.dto';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
+import { UserRole } from '@domain/enums/user-role.enum';
+import { Public } from '../decorators/public.decorator';
+import { Roles } from '../decorators/roles.decorator';
 
 @ApiTags('service-orders')
 @ApiBearerAuth()
 @Controller('api/service-orders')
 export class ServiceOrdersController {
   constructor(
-    private readonly createOrder: CreateServiceOrderUseCase,
-    private readonly getOrder: GetServiceOrderUseCase,
-    private readonly listOrders: ListServiceOrdersUseCase,
-    private readonly listByCustomer: ListServiceOrdersByCustomerUseCase,
-    private readonly listByStatus: ListServiceOrdersByStatusUseCase,
-    private readonly addService: AddServiceToOrderUseCase,
-    private readonly addPart: AddPartToOrderUseCase,
-    private readonly startDiagnosis: StartDiagnosisUseCase,
+    private readonly avgExecutionTime: GetAverageExecutionTimeUseCase,
     private readonly requestApproval: RequestApprovalUseCase,
-    private readonly approveOrder: ApproveOrderUseCase,
+    private readonly listByCustomer: ListServiceOrdersByCustomerUseCase,
+    private readonly startDiagnosis: StartDiagnosisUseCase,
     private readonly completeOrder: CompleteOrderUseCase,
     private readonly deliverOrder: DeliverOrderUseCase,
+    private readonly approveOrder: ApproveOrderUseCase,
+    private readonly listByStatus: ListServiceOrdersByStatusUseCase,
     private readonly cancelOrder: CancelOrderUseCase,
+    private readonly createOrder: CreateServiceOrderUseCase,
     private readonly trackOrder: TrackServiceOrderUseCase,
-    private readonly avgExecutionTime: GetAverageExecutionTimeUseCase,
+    private readonly listOrders: ListServiceOrdersUseCase,
+    private readonly addService: AddServiceToOrderUseCase,
+    private readonly getOrder: GetServiceOrderUseCase,
+    private readonly addPart: AddPartToOrderUseCase,
   ) {}
 
   @Post()

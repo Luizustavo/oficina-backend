@@ -1,29 +1,29 @@
-import { Module } from '@nestjs/common';
-import { VehiclesController } from '../controllers/vehicles.controller';
 import {
-  CreateVehicleUseCase,
-  GetVehicleUseCase,
-  ListVehiclesUseCase,
   ListVehiclesByCustomerUseCase,
+  CreateVehicleUseCase,
   UpdateVehicleUseCase,
   DeleteVehicleUseCase,
-} from '../../../application/use-cases/vehicle/vehicle.use-cases';
-import { VehicleRepository } from '../../database/repositories/vehicle.repository';
-import { CustomerRepository } from '../../database/repositories/customer.repository';
-import { VEHICLE_REPOSITORY } from '../../../domain/vehicle/vehicle.repository.interface';
-import { CUSTOMER_REPOSITORY } from '../../../domain/customer/customer.repository.interface';
+  ListVehiclesUseCase,
+  GetVehicleUseCase,
+} from '@application/use-cases/vehicle/vehicle.use-cases';
+import { CUSTOMER_REPOSITORY } from '@domain/repositories/customer.repository.interface';
+import { CustomerRepository } from '@infrastructure/database/prisma/repositories/customer.repository';
+import { VEHICLE_REPOSITORY } from '@domain/repositories/vehicle.repository.interface';
+import { VehiclesController } from '../controllers/vehicles.controller';
+import { VehicleRepository } from '@infrastructure/database/prisma/repositories/vehicle.repository';
+import { Module } from '@nestjs/common';
 
 @Module({
   controllers: [VehiclesController],
   providers: [
-    CreateVehicleUseCase,
-    GetVehicleUseCase,
-    ListVehiclesUseCase,
     ListVehiclesByCustomerUseCase,
     UpdateVehicleUseCase,
     DeleteVehicleUseCase,
-    { provide: VEHICLE_REPOSITORY, useClass: VehicleRepository },
+    CreateVehicleUseCase,
+    ListVehiclesUseCase,
+    GetVehicleUseCase,
     { provide: CUSTOMER_REPOSITORY, useClass: CustomerRepository },
+    { provide: VEHICLE_REPOSITORY, useClass: VehicleRepository },
   ],
   exports: [{ provide: VEHICLE_REPOSITORY, useClass: VehicleRepository }],
 })

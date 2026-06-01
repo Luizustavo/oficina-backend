@@ -8,8 +8,8 @@ import {
   UpdatePartUseCase,
   DeletePartUseCase,
 } from './part.use-cases';
-import { IPartRepository } from '../../../domain/part/part.repository.interface';
-import { Part } from '../../../domain/part/part.entity';
+import { IPartRepository } from '../../../domain/repositories/part.repository.interface';
+import { Part } from '../../../domain/entities/part/part.entity';
 import {
   NotFoundException,
   DomainException,

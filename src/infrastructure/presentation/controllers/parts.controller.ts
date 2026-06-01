@@ -1,45 +1,45 @@
 import {
   Controller,
-  Get,
-  Post,
-  Patch,
   Delete,
-  Body,
-  Param,
+  Patch,
   Query,
+  Param,
+  Post,
+  Body,
+  Get,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { Roles } from '../decorators/roles.decorator';
-import { UserRole } from '../../../domain/user/user-role.enum';
 import {
-  CreatePartUseCase,
-  GetPartUseCase,
-  ListPartsUseCase,
   ListLowStockPartsUseCase,
-  UpdatePartUseCase,
-  AddStockUseCase,
   RemoveStockUseCase,
+  CreatePartUseCase,
+  UpdatePartUseCase,
   DeletePartUseCase,
-} from '../../../application/use-cases/part/part.use-cases';
+  ListPartsUseCase,
+  AddStockUseCase,
+  GetPartUseCase,
+} from '@application/use-cases/part/part.use-cases';
 import {
   CreatePartRequestDto,
   UpdatePartRequestDto,
   StockOperationDto,
-} from '../../../application/dtos/request/part.dto';
+} from '@application/dtos/request/part.dto';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { UserRole } from '@domain/enums/user-role.enum';
+import { Roles } from '../decorators/roles.decorator';
 
 @ApiTags('parts')
 @ApiBearerAuth()
 @Controller('api/parts')
 export class PartsController {
   constructor(
-    private readonly createPart: CreatePartUseCase,
-    private readonly getPart: GetPartUseCase,
-    private readonly listParts: ListPartsUseCase,
     private readonly listLowStock: ListLowStockPartsUseCase,
-    private readonly updatePart: UpdatePartUseCase,
-    private readonly addStock: AddStockUseCase,
     private readonly removeStock: RemoveStockUseCase,
+    private readonly createPart: CreatePartUseCase,
     private readonly deletePart: DeletePartUseCase,
+    private readonly updatePart: UpdatePartUseCase,
+    private readonly listParts: ListPartsUseCase,
+    private readonly addStock: AddStockUseCase,
+    private readonly getPart: GetPartUseCase,
   ) {}
 
   @Post()

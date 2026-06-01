@@ -4,9 +4,9 @@ import {
   ListVehiclesByCustomerUseCase,
   DeleteVehicleUseCase,
 } from './vehicle.use-cases';
-import { IVehicleRepository } from '../../../domain/vehicle/vehicle.repository.interface';
-import { ICustomerRepository } from '../../../domain/customer/customer.repository.interface';
-import { Vehicle } from '../../../domain/vehicle/vehicle.entity';
+import { IVehicleRepository } from '../../../domain/repositories/vehicle.repository.interface';
+import { ICustomerRepository } from '../../../domain/repositories/customer.repository.interface';
+import { Vehicle } from '../../../domain/entities/vehicle/vehicle.entity';
 import {
   ConflictException,
   NotFoundException,

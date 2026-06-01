@@ -1,29 +1,29 @@
-import { Module } from '@nestjs/common';
-import { PartsController } from '../controllers/parts.controller';
 import {
-  CreatePartUseCase,
-  GetPartUseCase,
-  ListPartsUseCase,
   ListLowStockPartsUseCase,
-  UpdatePartUseCase,
-  AddStockUseCase,
   RemoveStockUseCase,
   DeletePartUseCase,
-} from '../../../application/use-cases/part/part.use-cases';
-import { PartRepository } from '../../database/repositories/part.repository';
-import { PART_REPOSITORY } from '../../../domain/part/part.repository.interface';
+  CreatePartUseCase,
+  UpdatePartUseCase,
+  ListPartsUseCase,
+  AddStockUseCase,
+  GetPartUseCase,
+} from '@application/use-cases/part/part.use-cases';
+import { PartsController } from '../controllers/parts.controller';
+import { PART_REPOSITORY } from '@domain/repositories/part.repository.interface';
+import { PartRepository } from '@infrastructure/database/prisma/repositories/part.repository';
+import { Module } from '@nestjs/common';
 
 @Module({
   controllers: [PartsController],
   providers: [
-    CreatePartUseCase,
-    GetPartUseCase,
-    ListPartsUseCase,
     ListLowStockPartsUseCase,
-    UpdatePartUseCase,
-    AddStockUseCase,
     RemoveStockUseCase,
+    CreatePartUseCase,
+    UpdatePartUseCase,
     DeletePartUseCase,
+    ListPartsUseCase,
+    AddStockUseCase,
+    GetPartUseCase,
     { provide: PART_REPOSITORY, useClass: PartRepository },
   ],
   exports: [{ provide: PART_REPOSITORY, useClass: PartRepository }],

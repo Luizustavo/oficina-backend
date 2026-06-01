@@ -1,52 +1,47 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { randomUUID } from 'crypto';
-import * as bcrypt from 'bcrypt';
 import {
   IUserRepository,
   USER_REPOSITORY,
-} from '../../../domain/user/user.repository.interface';
-import { User } from '../../../domain/user/user.entity';
-import { ConflictException } from '../../../shared/exceptions/domain.exceptions';
-import { CreateUserRequestDto } from '../../dtos/request/auth.dto';
-import { UserResponseDto } from '../../dtos/response/auth.dto';
-
-export type { UserResponseDto };
+} from '@domain/repositories/user.repository.interface';
+import { CreateUserRequestDto } from '@application/dtos/request/auth.dto';
+import { Injectable, Inject } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
+import { UserResponseDto } from '@application/dtos/response/auth.dto';
+import { UserEntity } from '@domain/entities/user/user.entity';
+import { UserMapper } from '@application/mappers/user.mapper';
+import { Logger } from '@nestjs/common';
 
 @Injectable()
 export class CreateUserUseCase {
   constructor(
     @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
+    private readonly logger: Logger,
   ) {}
 
   async execute(dto: CreateUserRequestDto): Promise<UserResponseDto> {
-    const existing = await this.userRepository.findByEmail(dto.email);
+    this.logger.log(`Creating user with email: ${dto.email}`);
+
+    const entity = UserMapper.toEntity(dto);
+
+    const existing = await this.userRepository.findByEmail(entity.email);
     if (existing) {
-      throw new ConflictException(`Email "${dto.email}" is already in use`);
+      this.logger.warn(
+        `Attempt to create user with existing email: ${dto.email}`,
+      );
+      throw new ConflictException(`Email is already in use`);
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 12);
+    const created: UserEntity = await this.userRepository.create(entity);
+    this.logger.log(`User created successfully with ID: ${created.id}`);
 
-    const user = User.create({
-      id: randomUUID(),
-      name: dto.name,
-      email: dto.email,
-      password: hashedPassword,
-      role: dto.role,
-    });
+    if (!created) {
+      this.logger.error(`Failed to create user with email: ${dto.email}`);
+      throw new Error('Failed to create user');
+    }
 
-    const created = await this.userRepository.create(user);
-    return this.toResponse(created);
-  }
+    const response: UserResponseDto = UserMapper.toResponse(created);
+    this.logger.log('Use case execution completed successfully');
 
-  private toResponse(user: User): UserResponseDto {
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive,
-      createdAt: user.createdAt,
-    };
+    return response;
   }
 }

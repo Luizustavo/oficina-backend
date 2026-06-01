@@ -1,6 +1,6 @@
 import { CreateCustomerUseCase } from './create-customer.use-case';
-import { CustomerType } from '../../../domain/customer/customer-type.enum';
-import { ICustomerRepository } from '../../../domain/customer/customer.repository.interface';
+import { CustomerType } from '../../../domain/enums/customer-type.enum';
+import { ICustomerRepository } from '../../../domain/repositories/customer.repository.interface';
 import { ConflictException } from '../../../shared/exceptions/domain.exceptions';
 
 const makeRepo = (): jest.Mocked<ICustomerRepository> => ({

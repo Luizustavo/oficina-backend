@@ -3,8 +3,8 @@ import { randomUUID } from 'crypto';
 import {
   ICustomerRepository,
   CUSTOMER_REPOSITORY,
-} from '../../../domain/customer/customer.repository.interface';
-import { Customer } from '../../../domain/customer/customer.entity';
+} from '../../../domain/repositories/customer.repository.interface';
+import { CustomerEntity } from '../../../domain/entities/customer/customer.entity';
 import { ConflictException } from '../../../shared/exceptions/domain.exceptions';
 import { CreateCustomerRequestDto } from '../../dtos/request/customer.dto';
 import { CustomerResponseDto } from '../../dtos/response/customer.dto';
@@ -26,21 +26,20 @@ export class CreateCustomerUseCase {
       );
     }
 
-    const customer = Customer.create({
-      id: randomUUID(),
+    const customer = CustomerEntity.create({
       name: dto.name,
       document: dto.document.replace(/\D/g, ''),
       type: dto.type,
       email: dto.email,
       phone: dto.phone,
       address: dto.address,
-    });
+    }, randomUUID());
 
     const created = await this.customerRepository.create(customer);
     return this.toResponse(created);
   }
 
-  toResponse(customer: Customer): CustomerResponseDto {
+  toResponse(customer: CustomerEntity): CustomerResponseDto {
     return {
       id: customer.id,
       name: customer.name,

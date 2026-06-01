@@ -1,38 +1,38 @@
 import {
   Controller,
-  Get,
-  Post,
-  Patch,
   Delete,
-  Body,
+  Patch,
   Param,
   Query,
+  Post,
+  Body,
+  Get,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import {
-  CreateVehicleUseCase,
-  GetVehicleUseCase,
-  ListVehiclesUseCase,
   ListVehiclesByCustomerUseCase,
+  CreateVehicleUseCase,
   UpdateVehicleUseCase,
   DeleteVehicleUseCase,
-} from '../../../application/use-cases/vehicle/vehicle.use-cases';
+  ListVehiclesUseCase,
+  GetVehicleUseCase,
+} from '@application/use-cases/vehicle/vehicle.use-cases';
 import {
   CreateVehicleRequestDto,
   UpdateVehicleRequestDto,
-} from '../../../application/dtos/request/vehicle.dto';
+} from '@application/dtos/request/vehicle.dto';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('vehicles')
 @ApiBearerAuth()
 @Controller('api/vehicles')
 export class VehiclesController {
   constructor(
-    private readonly createVehicle: CreateVehicleUseCase,
-    private readonly getVehicle: GetVehicleUseCase,
-    private readonly listVehicles: ListVehiclesUseCase,
     private readonly listByCustomer: ListVehiclesByCustomerUseCase,
+    private readonly createVehicle: CreateVehicleUseCase,
     private readonly updateVehicle: UpdateVehicleUseCase,
     private readonly deleteVehicle: DeleteVehicleUseCase,
+    private readonly listVehicles: ListVehiclesUseCase,
+    private readonly getVehicle: GetVehicleUseCase,
   ) {}
 
   @Post()

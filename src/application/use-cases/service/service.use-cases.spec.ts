@@ -4,8 +4,8 @@ import {
   ToggleServiceUseCase,
   DeleteServiceUseCase,
 } from './service.use-cases';
-import { IServiceRepository } from '../../../domain/service/service.repository.interface';
-import { Service } from '../../../domain/service/service.entity';
+import { IServiceRepository } from '../../../domain/repositories/service.repository.interface';
+import { Service } from '../../../domain/entities/service/service.entity';
 import { NotFoundException } from '../../../shared/exceptions/domain.exceptions';
 
 const makeRepo = (): jest.Mocked<IServiceRepository> => ({

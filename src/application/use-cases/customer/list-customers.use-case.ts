@@ -2,8 +2,8 @@ import { Injectable, Inject } from '@nestjs/common';
 import {
   ICustomerRepository,
   CUSTOMER_REPOSITORY,
-} from '../../../domain/customer/customer.repository.interface';
-import { Customer } from '../../../domain/customer/customer.entity';
+} from '../../../domain/repositories/customer.repository.interface';
+import { CustomerEntity } from '../../../domain/entities/customer/customer.entity';
 import { NotFoundException } from '../../../shared/exceptions/domain.exceptions';
 import { CustomerResponseDto } from '../../dtos/response/customer.dto';
 import { PaginatedResponseDto } from '../../dtos/common.dto';
@@ -36,7 +36,7 @@ export class ListCustomersUseCase {
     };
   }
 
-  private toResponse(customer: Customer): CustomerResponseDto {
+  private toResponse(customer: CustomerEntity): CustomerResponseDto {
     return {
       id: customer.id,
       name: customer.name,

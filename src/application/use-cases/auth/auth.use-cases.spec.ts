@@ -1,8 +1,8 @@
 import { CreateUserUseCase } from './create-user.use-case';
 import { RefreshTokenUseCase } from './refresh-token.use-case';
-import { IUserRepository } from '../../../domain/user/user.repository.interface';
-import { User } from '../../../domain/user/user.entity';
-import { UserRole } from '../../../domain/user/user-role.enum';
+import { IUserRepository } from '../../../domain/repositories/user.repository.interface';
+import { User } from '../../../domain/entities/user/user.entity';
+import { UserRole } from '../../../domain/enums/user-role.enum';
 import { ConflictException } from '../../../shared/exceptions/domain.exceptions';
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';

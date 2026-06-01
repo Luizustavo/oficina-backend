@@ -3,8 +3,8 @@ import { randomUUID } from 'crypto';
 import {
   IServiceRepository,
   SERVICE_REPOSITORY,
-} from '../../../domain/service/service.repository.interface';
-import { Service } from '../../../domain/service/service.entity';
+} from '../../../domain/repositories/service.repository.interface';
+import { ServiceEntity } from '../../../domain/entities/service/service.entity';
 import { NotFoundException } from '../../../shared/exceptions/domain.exceptions';
 import {
   CreateServiceRequestDto,
@@ -13,7 +13,7 @@ import {
 import { ServiceResponseDto } from '../../dtos/response/service.dto';
 import { PaginatedResponseDto } from '../../dtos/common.dto';
 
-function toResponse(service: Service): ServiceResponseDto {
+function toResponse(service: ServiceEntity): ServiceResponseDto {
   return {
     id: service.id,
     name: service.name,
@@ -34,7 +34,7 @@ export class CreateServiceUseCase {
   ) {}
 
   async execute(dto: CreateServiceRequestDto): Promise<ServiceResponseDto> {
-    const service = Service.create({ id: randomUUID(), ...dto });
+    const service = ServiceEntity.create({ ...dto }, randomUUID());
     const created = await this.serviceRepository.create(service);
     return toResponse(created);
   }

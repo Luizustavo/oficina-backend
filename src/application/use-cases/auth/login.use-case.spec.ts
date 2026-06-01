@@ -2,8 +2,8 @@ import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { LoginUseCase } from './login.use-case';
-import { IUserRepository } from '../../../domain/user/user.repository.interface';
-import { UserRole } from '../../../domain/user/user-role.enum';
+import { IUserRepository } from '../../../domain/repositories/user.repository.interface';
+import { UserRole } from '../../../domain/enums/user-role.enum';
 
 const makeUserRepo = (): jest.Mocked<IUserRepository> => ({
   findById: jest.fn(),

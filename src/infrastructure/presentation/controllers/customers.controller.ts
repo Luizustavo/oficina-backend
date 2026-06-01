@@ -1,28 +1,28 @@
 import {
   Controller,
-  Get,
-  Post,
-  Patch,
   Delete,
-  Body,
+  Patch,
   Param,
   Query,
+  Post,
+  Body,
+  Get,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { CreateCustomerUseCase } from '../../../application/use-cases/customer/create-customer.use-case';
 import {
+  GetCustomerByDocumentUseCase,
   ListCustomersUseCase,
   GetCustomerUseCase,
-  GetCustomerByDocumentUseCase,
-} from '../../../application/use-cases/customer/list-customers.use-case';
+} from '@application/use-cases/customer/list-customers.use-case';
 import {
-  UpdateCustomerUseCase,
   DeleteCustomerUseCase,
-} from '../../../application/use-cases/customer/update-customer.use-case';
+  UpdateCustomerUseCase,
+} from '@application/use-cases/customer/update-customer.use-case';
 import {
   CreateCustomerRequestDto,
   UpdateCustomerRequestDto,
-} from '../../../application/dtos/request/customer.dto';
+} from '@application/dtos/request/customer.dto';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { CreateCustomerUseCase } from '@application/use-cases/customer/create-customer.use-case';
 
 @ApiTags('customers')
 @ApiBearerAuth()
@@ -30,11 +30,11 @@ import {
 export class CustomersController {
   constructor(
     private readonly createCustomer: CreateCustomerUseCase,
-    private readonly listCustomers: ListCustomersUseCase,
-    private readonly getCustomer: GetCustomerUseCase,
-    private readonly getByDocument: GetCustomerByDocumentUseCase,
     private readonly updateCustomer: UpdateCustomerUseCase,
     private readonly deleteCustomer: DeleteCustomerUseCase,
+    private readonly listCustomers: ListCustomersUseCase,
+    private readonly getByDocument: GetCustomerByDocumentUseCase,
+    private readonly getCustomer: GetCustomerUseCase,
   ) {}
 
   @Post()

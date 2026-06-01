@@ -1,20 +1,20 @@
 import {
   ExceptionFilter,
-  Catch,
   ArgumentsHost,
   HttpException,
   HttpStatus,
   Logger,
+  Catch,
 } from '@nestjs/common';
-import { Response, Request } from 'express';
 import {
-  DomainException,
-  NotFoundException,
-  ConflictException,
-  BusinessRuleException,
   InvalidStatusTransitionException,
   InsufficientStockException,
-} from '../../../shared/exceptions/domain.exceptions';
+  BusinessRuleException,
+  NotFoundException,
+  ConflictException,
+  DomainException,
+} from '@shared/exceptions/domain.exceptions';
+import { Response, Request } from 'express';
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {

@@ -3,25 +3,25 @@ import { randomUUID } from 'crypto';
 import {
   IServiceOrderRepository,
   SERVICE_ORDER_REPOSITORY,
-} from '../../../domain/service-order/service-order.repository.interface';
+} from '../../../domain/repositories/service-order.repository.interface';
 import {
   ICustomerRepository,
   CUSTOMER_REPOSITORY,
-} from '../../../domain/customer/customer.repository.interface';
+} from '../../../domain/repositories/customer.repository.interface';
 import {
   IVehicleRepository,
   VEHICLE_REPOSITORY,
-} from '../../../domain/vehicle/vehicle.repository.interface';
+} from '../../../domain/repositories/vehicle.repository.interface';
 import {
   IServiceRepository,
   SERVICE_REPOSITORY,
-} from '../../../domain/service/service.repository.interface';
+} from '../../../domain/repositories/service.repository.interface';
 import {
   IPartRepository,
   PART_REPOSITORY,
-} from '../../../domain/part/part.repository.interface';
-import { ServiceOrder } from '../../../domain/service-order/service-order.entity';
-import { ServiceOrderStatus } from '../../../domain/value-objects/service-order-status.value-object';
+} from '../../../domain/repositories/part.repository.interface';
+import { ServiceOrderEntity } from '../../../domain/entities/service-order/service-order.entity';
+import { ServiceOrderStatus } from '../../../domain/validators/value-objects/service-order-status.value-object';
 import {
   NotFoundException,
   InsufficientStockException,
@@ -40,7 +40,7 @@ import {
 } from '../../dtos/response/service-order.dto';
 import { PaginatedResponseDto } from '../../dtos/common.dto';
 
-function toResponse(order: ServiceOrder): ServiceOrderResponseDto {
+function toResponse(order: ServiceOrderEntity): ServiceOrderResponseDto {
   return {
     id: order.id,
     orderNumber: order.orderNumber,
@@ -98,14 +98,13 @@ export class CreateServiceOrderUseCase {
       );
     }
 
-    const order = ServiceOrder.create({
-      id: randomUUID(),
+    const order = ServiceOrderEntity.create({
       orderNumber: generateOrderNumber(),
       customerId: dto.customerId,
       vehicleId: dto.vehicleId,
       problemDescription: dto.problemDescription,
       notes: dto.notes,
-    });
+    }, randomUUID());
 
     const created = await this.orderRepository.create(order);
     return toResponse(created);

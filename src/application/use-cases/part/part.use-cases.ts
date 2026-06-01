@@ -3,8 +3,8 @@ import { randomUUID } from 'crypto';
 import {
   IPartRepository,
   PART_REPOSITORY,
-} from '../../../domain/part/part.repository.interface';
-import { Part } from '../../../domain/part/part.entity';
+} from '../../../domain/repositories/part.repository.interface';
+import { PartEntity } from '../../../domain/entities/part/part.entity';
 import {
   ConflictException,
   NotFoundException,
@@ -16,7 +16,7 @@ import {
 import { PartResponseDto } from '../../dtos/response/part.dto';
 import { PaginatedResponseDto } from '../../dtos/common.dto';
 
-function toResponse(part: Part): PartResponseDto {
+function toResponse(part: PartEntity): PartResponseDto {
   return {
     id: part.id,
     name: part.name,
@@ -42,9 +42,9 @@ export class CreatePartUseCase {
     const existing = await this.partRepository.findByCode(dto.code);
     if (existing)
       throw new ConflictException(
-        `Part code "${dto.code}" is already registered`,
+        `PartEntity code "${dto.code}" is already registered`,
       );
-    const part = Part.create({ id: randomUUID(), ...dto });
+    const part = PartEntity.create({ ...dto }, randomUUID());
     const created = await this.partRepository.create(part);
     return toResponse(created);
   }

@@ -5,7 +5,7 @@ import { JwtPayload } from '../../../infrastructure/presentation/decorators/curr
 import {
   IUserRepository,
   USER_REPOSITORY,
-} from '../../../domain/user/user.repository.interface';
+} from '../../../domain/repositories/user.repository.interface';
 import { RefreshResponseDto } from '../../dtos/response/auth.dto';
 
 @Injectable()
