@@ -23,7 +23,7 @@ export class PrismaUserMapper {
   }
 
   public static toEntity(prisma: PrismaUser): UserEntity {
-    const entity = new UserEntity(
+    return UserEntity.reconstitute(
       {
         name: prisma.name,
         email: prisma.email,
@@ -35,6 +35,5 @@ export class PrismaUserMapper {
       },
       prisma.id,
     );
-    return entity;
   }
 }

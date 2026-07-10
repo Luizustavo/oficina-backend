@@ -44,8 +44,8 @@ export class CustomerEntity {
     );
   }
 
-  static reconstitute(props: CustomerProps): CustomerEntity {
-    return new CustomerEntity(props);
+  static reconstitute(props: CustomerProps, id?: string): CustomerEntity {
+    return new CustomerEntity(props, id);
   }
 
   private static validate(props: CreateCustomerProps): void {

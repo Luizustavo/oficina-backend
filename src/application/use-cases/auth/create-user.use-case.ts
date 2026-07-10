@@ -1,11 +1,10 @@
 import { CreateUserRequestDto } from '@application/dtos/request/auth.dto';
-import { ConflictException } from '@nestjs/common';
 import { IUserRepository } from '@domain/repositories/user.repository.interface';
 import { UserResponseDto } from '@application/dtos/response/auth.dto';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { UserEntity } from '@domain/entities/user/user.entity';
 import { UserMapper } from '@application/mappers/user.mapper';
-import { Logger } from '@nestjs/common';
+import { ConflictException } from '@shared/exceptions/domain.exceptions';
 
 @Injectable()
 export class CreateUserUseCase {

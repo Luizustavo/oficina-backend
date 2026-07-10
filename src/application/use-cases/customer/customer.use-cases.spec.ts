@@ -1,19 +1,16 @@
-import {
-  ListCustomersUseCase,
-  GetCustomerUseCase,
-  GetCustomerByDocumentUseCase,
-} from './list-customers.use-case';
-import {
-  UpdateCustomerUseCase,
-  DeleteCustomerUseCase,
-} from './update-customer.use-case';
-import { ICustomerRepository } from '../../../domain/repositories/customer.repository.interface';
-import { Customer } from '../../../domain/entities/customer/customer.entity';
-import { CustomerType } from '../../../domain/enums/customer-type.enum';
+import { Logger } from '@nestjs/common';
+import { ListCustomersUseCase } from './list-customers.use-case';
+import { GetCustomerUseCase } from './get-customer.use-case';
+import { GetCustomerByDocumentUseCase } from './get-customer-by-document.use-case';
+import { UpdateCustomerUseCase } from './update-customer.use-case';
+import { DeleteCustomerUseCase } from './delete-customer.use-case';
+import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
+import { CustomerEntity } from '@domain/entities/customer/customer.entity';
+import { CustomerType } from '@domain/enums/customer-type.enum';
 import {
   NotFoundException,
   BusinessRuleException,
-} from '../../../shared/exceptions/domain.exceptions';
+} from '@shared/exceptions/domain.exceptions';
 
 const makeRepo = (): jest.Mocked<ICustomerRepository> => ({
   findById: jest.fn(),
@@ -26,17 +23,26 @@ const makeRepo = (): jest.Mocked<ICustomerRepository> => ({
   hasServiceOrders: jest.fn(),
 });
 
+const makeLogger = (): jest.Mocked<Logger> =>
+  ({
+    log: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  }) as unknown as jest.Mocked<Logger>;
+
 const makeCustomer = () =>
-  Customer.reconstitute({
-    id: 'c-1',
-    name: 'Carlos Silva',
-    document: '52998224725',
-    type: CustomerType.INDIVIDUAL,
-    email: 'carlos@email.com',
-    phone: '11999990001',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
+  CustomerEntity.reconstitute(
+    {
+      name: 'Carlos Silva',
+      document: '52998224725',
+      type: CustomerType.INDIVIDUAL,
+      email: 'carlos@email.com',
+      phone: '11999990001',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    'c-1',
+  );
 
 describe('ListCustomersUseCase', () => {
   it('should return paginated customers', async () => {
@@ -44,7 +50,7 @@ describe('ListCustomersUseCase', () => {
     const customer = makeCustomer();
     repo.findAll.mockResolvedValue({ data: [customer], total: 1 });
 
-    const result = await new ListCustomersUseCase(repo).execute({
+    const result = await new ListCustomersUseCase(repo, makeLogger()).execute({
       page: 1,
       limit: 10,
     });
@@ -58,7 +64,9 @@ describe('ListCustomersUseCase', () => {
     const repo = makeRepo();
     repo.findAll.mockResolvedValue({ data: [], total: 0 });
 
-    const result = await new ListCustomersUseCase(repo).execute();
+    const result = await new ListCustomersUseCase(repo, makeLogger()).execute(
+      {},
+    );
     expect(result.page).toBe(1);
     expect(result.limit).toBe(20);
   });
@@ -69,7 +77,9 @@ describe('GetCustomerUseCase', () => {
     const repo = makeRepo();
     repo.findById.mockResolvedValue(makeCustomer());
 
-    const result = await new GetCustomerUseCase(repo).execute('c-1');
+    const result = await new GetCustomerUseCase(repo, makeLogger()).execute(
+      'c-1',
+    );
     expect(result.id).toBe('c-1');
   });
 
@@ -77,7 +87,7 @@ describe('GetCustomerUseCase', () => {
     const repo = makeRepo();
     repo.findById.mockResolvedValue(null);
     await expect(
-      new GetCustomerUseCase(repo).execute('missing'),
+      new GetCustomerUseCase(repo, makeLogger()).execute('missing'),
     ).rejects.toThrow(NotFoundException);
   });
 });
@@ -87,9 +97,10 @@ describe('GetCustomerByDocumentUseCase', () => {
     const repo = makeRepo();
     repo.findByDocument.mockResolvedValue(makeCustomer());
 
-    const result = await new GetCustomerByDocumentUseCase(repo).execute(
-      '529.982.247-25',
-    );
+    const result = await new GetCustomerByDocumentUseCase(
+      repo,
+      makeLogger(),
+    ).execute('529.982.247-25');
     expect(repo.findByDocument).toHaveBeenCalledWith('52998224725');
     expect(result.document).toBe('52998224725');
   });
@@ -98,7 +109,9 @@ describe('GetCustomerByDocumentUseCase', () => {
     const repo = makeRepo();
     repo.findByDocument.mockResolvedValue(null);
     await expect(
-      new GetCustomerByDocumentUseCase(repo).execute('52998224725'),
+      new GetCustomerByDocumentUseCase(repo, makeLogger()).execute(
+        '52998224725',
+      ),
     ).rejects.toThrow(NotFoundException);
   });
 });
@@ -110,9 +123,13 @@ describe('UpdateCustomerUseCase', () => {
     repo.findById.mockResolvedValue(customer);
     repo.update.mockImplementation(async (c) => c);
 
-    const result = await new UpdateCustomerUseCase(repo).execute('c-1', {
-      name: 'Carlos Updated',
-    });
+    const result = await new UpdateCustomerUseCase(repo, makeLogger()).execute(
+      'c-1',
+      {
+        id: 'c-1',
+        name: 'Carlos Updated',
+      },
+    );
     expect(result.name).toBe('Carlos Updated');
   });
 
@@ -120,7 +137,9 @@ describe('UpdateCustomerUseCase', () => {
     const repo = makeRepo();
     repo.findById.mockResolvedValue(null);
     await expect(
-      new UpdateCustomerUseCase(repo).execute('missing', {}),
+      new UpdateCustomerUseCase(repo, makeLogger()).execute('missing', {
+        id: 'missing',
+      }),
     ).rejects.toThrow(NotFoundException);
   });
 });
@@ -133,7 +152,7 @@ describe('DeleteCustomerUseCase', () => {
     repo.delete.mockResolvedValue();
 
     await expect(
-      new DeleteCustomerUseCase(repo).execute('c-1'),
+      new DeleteCustomerUseCase(repo, makeLogger()).execute('c-1'),
     ).resolves.toBeUndefined();
     expect(repo.delete).toHaveBeenCalledWith('c-1');
   });
@@ -142,7 +161,7 @@ describe('DeleteCustomerUseCase', () => {
     const repo = makeRepo();
     repo.existsById.mockResolvedValue(false);
     await expect(
-      new DeleteCustomerUseCase(repo).execute('missing'),
+      new DeleteCustomerUseCase(repo, makeLogger()).execute('missing'),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -151,7 +170,7 @@ describe('DeleteCustomerUseCase', () => {
     repo.existsById.mockResolvedValue(true);
     repo.hasServiceOrders.mockResolvedValue(true);
     await expect(
-      new DeleteCustomerUseCase(repo).execute('c-1'),
+      new DeleteCustomerUseCase(repo, makeLogger()).execute('c-1'),
     ).rejects.toThrow(BusinessRuleException);
   });
 });

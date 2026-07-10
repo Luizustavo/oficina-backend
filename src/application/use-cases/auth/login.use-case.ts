@@ -4,6 +4,7 @@ import { IUserRepository } from '@domain/repositories/user.repository.interface'
 import { LoginRequestDto } from '@application/dtos/request/auth.dto';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from '@infrastructure/presentation/decorators/current-user.decorator';
+import { jwtConfig } from '@infrastructure/config/jwt.config';
 
 import * as bcrypt from 'bcrypt';
 import type { StringValue } from 'ms';
@@ -17,16 +18,21 @@ export class LoginUseCase {
   ) {}
 
   async execute(dto: LoginRequestDto): Promise<LoginResponseDto> {
+    const { jwt } = jwtConfig();
     this.logger.log(`Attempting login for email: ${dto.email}`);
 
     const user = await this.userRepository.findByEmail(dto.email);
     if (!user || !user.isActive) {
+      this.logger.warn(
+        `Login failed - user not found or inactive: ${dto.email}`,
+      );
       throw new UnauthorizedException('Invalid credentials');
     }
 
     this.logger.log(`Verifying password for user: ${user.id}`);
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
     if (!isPasswordValid) {
+      this.logger.warn(`Login failed - invalid password for user: ${user.id}`);
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -38,14 +44,16 @@ export class LoginUseCase {
     };
 
     const accessToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_SECRET || 'dev-jwt-secret',
-      expiresIn: (process.env.JWT_EXPIRES_IN ?? '15m') as StringValue,
+      secret: jwt.secret,
+      expiresIn: jwt.expiresIn as StringValue,
     });
 
     const refreshToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret',
-      expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN ?? '7d') as StringValue,
+      secret: jwt.refreshSecret,
+      expiresIn: jwt.refreshExpiresIn as StringValue,
     });
+
+    this.logger.log(`Login successful for user: ${user.id}`);
 
     return {
       accessToken,

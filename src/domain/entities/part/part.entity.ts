@@ -44,8 +44,8 @@ export class PartEntity {
     );
   }
 
-  static reconstitute(props: PartProps): PartEntity {
-    return new PartEntity(props);
+  static reconstitute(props: PartProps, id?: string): PartEntity {
+    return new PartEntity(props, id);
   }
 
   private static validate(props: CreatePartProps): void {

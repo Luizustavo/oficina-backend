@@ -1,7 +1,7 @@
 import { validate } from 'class-validator';
 import { IsValidDocument } from './is-valid-document.validator';
 import { IsLicensePlate } from './is-license-plate.validator';
-import { CustomerType } from '../../../domain/entities/customer/customer-type.enum';
+import { CustomerType } from '../enums/customer-type.enum';
 
 class DocumentDto {
   type!: CustomerType;

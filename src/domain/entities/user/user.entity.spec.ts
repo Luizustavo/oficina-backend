@@ -3,7 +3,6 @@ import { UserEntity } from './user.entity';
 import { UserRole } from '@domain/enums/user-role.enum';
 
 const validProps = {
-  id: 'user-1',
   name: 'Administrator',
   email: 'admin@oficina.com',
   password: 'hashed-password',
@@ -13,7 +12,7 @@ const validProps = {
 describe('User', () => {
   describe('create', () => {
     it('should create an active user with valid props', () => {
-      const user = UserEntity.create(validProps);
+      const user = UserEntity.create(validProps, 'user-1');
       expect(user.id).toBe('user-1');
       expect(user.isActive).toBe(true);
       expect(user.createdAt).toBeInstanceOf(Date);
@@ -56,12 +55,15 @@ describe('User', () => {
   describe('reconstitute', () => {
     it('should reconstitute from persisted props without validation', () => {
       const now = new Date();
-      const user = UserEntity.reconstitute({
-        ...validProps,
-        isActive: true,
-        createdAt: now,
-        updatedAt: now,
-      });
+      const user = UserEntity.reconstitute(
+        {
+          ...validProps,
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        },
+        'user-1',
+      );
       expect(user.email).toBe('admin@oficina.com');
       expect(user.role).toBe(UserRole.ADMIN);
     });

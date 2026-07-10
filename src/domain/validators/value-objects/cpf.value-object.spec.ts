@@ -1,5 +1,5 @@
 import { Cpf } from './cpf.value-object';
-import { InvalidCpfException } from '../../shared/exceptions/domain.exceptions';
+import { InvalidCpfException } from '../../../shared/exceptions/domain.exceptions';
 
 describe('Cpf', () => {
   describe('isValid', () => {

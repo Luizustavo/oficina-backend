@@ -5,8 +5,6 @@ import { ConflictException } from '@shared/exceptions/domain.exceptions';
 import { Injectable, Logger } from '@nestjs/common';
 import { CustomerMapper } from '@application/mappers/customer.mapper';
 
-export type { CustomerResponseDto };
-
 @Injectable()
 export class CreateCustomerUseCase {
   constructor(

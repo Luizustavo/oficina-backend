@@ -2,7 +2,7 @@ import {
   ServiceOrderStatus,
   ServiceOrderStatusVO,
 } from './service-order-status.value-object';
-import { InvalidStatusTransitionException } from '../../shared/exceptions/domain.exceptions';
+import { InvalidStatusTransitionException } from '../../../shared/exceptions/domain.exceptions';
 
 describe('ServiceOrderStatusVO', () => {
   describe('canTransitionTo', () => {

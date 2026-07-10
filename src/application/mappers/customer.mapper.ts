@@ -1,8 +1,5 @@
-import {
-  CreateCustomerRequestDto,
-  UpdateCustomerRequestDto,
-} from '@application/dtos/request/customer.dto';
-import { CustomerResponseDto } from '@application/use-cases/customer/create-customer.use-case';
+import { CreateCustomerRequestDto } from '@application/dtos/request/customer.dto';
+import { CustomerResponseDto } from '@application/dtos/response/customer.dto';
 import { CustomerEntity } from '@domain/entities/customer/customer.entity';
 
 export class CustomerMapper {

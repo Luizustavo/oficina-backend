@@ -8,15 +8,11 @@ import {
   Body,
   Get,
 } from '@nestjs/common';
-import {
-  GetCustomerByDocumentUseCase,
-  ListCustomersUseCase,
-  GetCustomerUseCase,
-} from '@application/use-cases/customer/list-customers.use-case';
-import {
-  DeleteCustomerUseCase,
-  UpdateCustomerUseCase,
-} from '@application/use-cases/customer/update-customer.use-case';
+import { GetCustomerByDocumentUseCase } from '@application/use-cases/customer/get-customer-by-document.use-case';
+import { ListCustomersUseCase } from '@application/use-cases/customer/list-customers.use-case';
+import { GetCustomerUseCase } from '@application/use-cases/customer/get-customer.use-case';
+import { DeleteCustomerUseCase } from '@application/use-cases/customer/delete-customer.use-case';
+import { UpdateCustomerUseCase } from '@application/use-cases/customer/update-customer.use-case';
 import {
   CreateCustomerRequestDto,
   UpdateCustomerRequestDto,

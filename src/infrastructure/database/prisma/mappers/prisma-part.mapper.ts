@@ -24,7 +24,7 @@ export class PrismaPartMapper {
   }
 
   public static toEntity(prisma: PrismaPart): PartEntity {
-    const entity = new PartEntity(
+    return PartEntity.reconstitute(
       {
         code: prisma.code,
         name: prisma.name,
@@ -38,6 +38,5 @@ export class PrismaPartMapper {
       },
       prisma.id,
     );
-    return entity;
   }
 }

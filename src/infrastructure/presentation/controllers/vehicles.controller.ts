@@ -8,14 +8,12 @@ import {
   Body,
   Get,
 } from '@nestjs/common';
-import {
-  ListVehiclesByCustomerUseCase,
-  CreateVehicleUseCase,
-  UpdateVehicleUseCase,
-  DeleteVehicleUseCase,
-  ListVehiclesUseCase,
-  GetVehicleUseCase,
-} from '@application/use-cases/vehicle/vehicle.use-cases';
+import { ListVehiclesByCustomerUseCase } from '@application/use-cases/vehicle/list-vehicles-by-customer.use-case';
+import { CreateVehicleUseCase } from '@application/use-cases/vehicle/create-vehicle.use-case';
+import { UpdateVehicleUseCase } from '@application/use-cases/vehicle/update-vehicle.use-case';
+import { DeleteVehicleUseCase } from '@application/use-cases/vehicle/delete-vehicle.use-case';
+import { ListVehiclesUseCase } from '@application/use-cases/vehicle/list-vehicles.use-case';
+import { GetVehicleUseCase } from '@application/use-cases/vehicle/get-vehicle.use-case';
 import {
   CreateVehicleRequestDto,
   UpdateVehicleRequestDto,

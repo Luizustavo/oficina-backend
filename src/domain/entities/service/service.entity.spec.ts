@@ -2,7 +2,6 @@ import { DomainException } from '@shared/exceptions/domain.exceptions';
 import { ServiceEntity } from './service.entity';
 
 const validProps = {
-  id: '1',
   name: 'Troca de Óleo',
   price: 80.0,
   estimatedDurationMinutes: 30,
@@ -11,7 +10,7 @@ const validProps = {
 describe('Service', () => {
   describe('create', () => {
     it('should create a service with valid props', () => {
-      const service = ServiceEntity.create(validProps);
+      const service = ServiceEntity.create(validProps, '1');
       expect(service.id).toBe('1');
       expect(service.name).toBe('Troca de Óleo');
       expect(service.isActive).toBe(true);

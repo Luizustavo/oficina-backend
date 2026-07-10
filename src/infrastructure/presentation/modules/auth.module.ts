@@ -6,6 +6,7 @@ import { AuthController } from '../controllers/auth.controller';
 import { UserRepository } from '@infrastructure/database/prisma/repositories/user.repository';
 import { LoginUseCase } from '@application/use-cases/auth/login.use-case';
 import { JwtStrategy } from '@infrastructure/config/jwt.strategy';
+import { jwtConfig } from '@infrastructure/config/jwt.config';
 import { JwtModule } from '@nestjs/jwt';
 import { Module, Logger } from '@nestjs/common';
 
@@ -15,9 +16,9 @@ import type { StringValue } from 'ms';
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'dev-jwt-secret',
+      secret: jwtConfig().jwt.secret,
       signOptions: {
-        expiresIn: (process.env.JWT_EXPIRES_IN ?? '15m') as StringValue,
+        expiresIn: jwtConfig().jwt.expiresIn as StringValue,
       },
     }),
   ],

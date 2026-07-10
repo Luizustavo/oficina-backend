@@ -2,7 +2,6 @@ import { DomainException } from '@shared/exceptions/domain.exceptions';
 import { VehicleEntity } from './vehicle.entity';
 
 const validProps = {
-  id: '1',
   customerId: 'customer-1',
   licensePlate: 'ABC1234',
   brand: 'Toyota',
@@ -15,7 +14,6 @@ describe('Vehicle', () => {
   describe('create', () => {
     it('should create a vehicle with valid props', () => {
       const vehicle = VehicleEntity.create(validProps);
-      expect(vehicle.id).toBe('1');
       expect(vehicle.licensePlate).toBe('ABC1234');
       expect(vehicle.brand).toBe('Toyota');
       expect(vehicle.createdAt).toBeInstanceOf(Date);

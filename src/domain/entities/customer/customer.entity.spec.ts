@@ -3,7 +3,6 @@ import { CustomerEntity } from './customer.entity';
 import { CustomerType } from '@domain/enums/customer-type.enum';
 
 const validIndividualProps = {
-  id: '1',
   name: 'Carlos Silva',
   document: '52998224725',
   type: CustomerType.INDIVIDUAL,
@@ -12,7 +11,6 @@ const validIndividualProps = {
 };
 
 const validCompanyProps = {
-  id: '2',
   name: 'Empresa Ltda',
   document: '11222333000181',
   type: CustomerType.COMPANY,
@@ -23,7 +21,7 @@ const validCompanyProps = {
 describe('Customer', () => {
   describe('create', () => {
     it('should create an INDIVIDUAL customer with valid props', () => {
-      const customer = CustomerEntity.create(validIndividualProps);
+      const customer = CustomerEntity.create(validIndividualProps, '1');
       expect(customer.id).toBe('1');
       expect(customer.name).toBe('Carlos Silva');
       expect(customer.type).toBe(CustomerType.INDIVIDUAL);
@@ -68,11 +66,14 @@ describe('Customer', () => {
   describe('reconstitute', () => {
     it('should reconstitute a customer from persisted props', () => {
       const now = new Date();
-      const customer = CustomerEntity.reconstitute({
-        ...validIndividualProps,
-        createdAt: now,
-        updatedAt: now,
-      });
+      const customer = CustomerEntity.reconstitute(
+        {
+          ...validIndividualProps,
+          createdAt: now,
+          updatedAt: now,
+        },
+        '1',
+      );
       expect(customer.id).toBe('1');
       expect(customer.createdAt).toBe(now);
     });

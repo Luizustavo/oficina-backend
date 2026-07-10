@@ -24,7 +24,7 @@ export class PrismaCustomerMapper {
   }
 
   public static toEntity(prisma: PrismaCustomer): CustomerEntity {
-    const entity = new CustomerEntity(
+    return CustomerEntity.reconstitute(
       {
         name: prisma.name,
         document: prisma.document,
@@ -37,6 +37,5 @@ export class PrismaCustomerMapper {
       },
       prisma.id,
     );
-    return entity;
   }
 }

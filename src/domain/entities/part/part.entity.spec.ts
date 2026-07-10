@@ -2,7 +2,6 @@ import { DomainException } from '@shared/exceptions/domain.exceptions';
 import { PartEntity } from './part.entity';
 
 const validProps = {
-  id: '1',
   name: 'Filtro de Óleo',
   code: 'FO-001',
   price: 25.9,
@@ -13,7 +12,7 @@ const validProps = {
 describe('Part', () => {
   describe('create', () => {
     it('should create a part with valid props', () => {
-      const part = PartEntity.create(validProps);
+      const part = PartEntity.create(validProps, '1');
       expect(part.id).toBe('1');
       expect(part.name).toBe('Filtro de Óleo');
       expect(part.isActive).toBe(true);
@@ -144,17 +143,20 @@ describe('Part', () => {
   describe('reconstitute', () => {
     it('should reconstitute a part with all props', () => {
       const now = new Date();
-      const part = PartEntity.reconstitute({
-        name: 'Filtro',
-        code: 'F-001',
-        description: 'Filtro de ar',
-        price: 30,
-        stockQuantity: 5,
-        minStockQuantity: 2,
-        isActive: false,
-        createdAt: now,
-        updatedAt: now,
-      });
+      const part = PartEntity.reconstitute(
+        {
+          name: 'Filtro',
+          code: 'F-001',
+          description: 'Filtro de ar',
+          price: 30,
+          stockQuantity: 5,
+          minStockQuantity: 2,
+          isActive: false,
+          createdAt: now,
+          updatedAt: now,
+        },
+        'p-1',
+      );
       expect(part.id).toBe('p-1');
       expect(part.description).toBe('Filtro de ar');
       expect(part.isActive).toBe(false);

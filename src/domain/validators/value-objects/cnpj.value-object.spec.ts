@@ -1,5 +1,5 @@
 import { Cnpj } from './cnpj.value-object';
-import { InvalidCnpjException } from '../../shared/exceptions/domain.exceptions';
+import { InvalidCnpjException } from '../../../shared/exceptions/domain.exceptions';
 
 describe('Cnpj', () => {
   describe('isValid', () => {

@@ -1,5 +1,5 @@
 import { LicensePlate } from './license-plate.value-object';
-import { InvalidLicensePlateException } from '../../shared/exceptions/domain.exceptions';
+import { InvalidLicensePlateException } from '../../../shared/exceptions/domain.exceptions';
 
 describe('LicensePlate', () => {
   describe('isValid', () => {

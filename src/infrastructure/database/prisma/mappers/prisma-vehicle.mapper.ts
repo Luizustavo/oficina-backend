@@ -25,7 +25,7 @@ export class PrismaVehicleMapper {
   }
 
   public static toEntity(prisma: PrismaVehicle): VehicleEntity {
-    const entity = new VehicleEntity(
+    return VehicleEntity.reconstitute(
       {
         customerId: prisma.customerId,
         brand: prisma.brand,
@@ -38,6 +38,5 @@ export class PrismaVehicleMapper {
       },
       prisma.id,
     );
-    return entity;
   }
 }

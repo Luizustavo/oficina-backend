@@ -6,13 +6,16 @@ import {
 } from '@application/dtos/request/auth.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Controller, Post, Body, Get } from '@nestjs/common';
-import { CurrentUser, JwtPayload } from '../decorators/current-user.decorator';
+import {
+  CurrentUser,
+  JwtPayload,
+} from '@infrastructure/presentation/decorators/current-user.decorator';
 import { RefreshTokenUseCase } from '@application/use-cases/auth/refresh-token.use-case';
 import { CreateUserUseCase } from '@application/use-cases/auth/create-user.use-case';
 import { LoginUseCase } from '@application/use-cases/auth/login.use-case';
 import { UserRole } from '@domain/enums/user-role.enum';
-import { Public } from '../decorators/public.decorator';
-import { Roles } from '../decorators/roles.decorator';
+import { Public } from '@infrastructure/presentation/decorators/public.decorator';
+import { Roles } from '@infrastructure/presentation/decorators/roles.decorator';
 
 @ApiTags('auth')
 @Controller('api/auth')

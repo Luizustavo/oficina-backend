@@ -1,22 +1,20 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { ServiceOrdersController } from '../controllers/service-orders.controller';
-import {
-  ListServiceOrdersByCustomerUseCase,
-  ListServiceOrdersByStatusUseCase,
-  GetAverageExecutionTimeUseCase,
-  CreateServiceOrderUseCase,
-  ListServiceOrdersUseCase,
-  TrackServiceOrderUseCase,
-  AddServiceToOrderUseCase,
-  RequestApprovalUseCase,
-  GetServiceOrderUseCase,
-  AddPartToOrderUseCase,
-  StartDiagnosisUseCase,
-  CompleteOrderUseCase,
-  ApproveOrderUseCase,
-  DeliverOrderUseCase,
-  CancelOrderUseCase,
-} from '@application/use-cases/service-order/service-order.use-cases';
+import { ListServiceOrdersByCustomerUseCase } from '@application/use-cases/service-order/list-service-orders-by-customer.use-case';
+import { ListServiceOrdersByStatusUseCase } from '@application/use-cases/service-order/list-service-orders-by-status.use-case';
+import { GetAverageExecutionTimeUseCase } from '@application/use-cases/service-order/get-average-execution-time.use-case';
+import { CreateServiceOrderUseCase } from '@application/use-cases/service-order/create-service-order.use-case';
+import { ListServiceOrdersUseCase } from '@application/use-cases/service-order/list-service-orders.use-case';
+import { TrackServiceOrderUseCase } from '@application/use-cases/service-order/track-service-order.use-case';
+import { AddServiceToOrderUseCase } from '@application/use-cases/service-order/add-service-to-order.use-case';
+import { RequestApprovalUseCase } from '@application/use-cases/service-order/request-approval.use-case';
+import { GetServiceOrderUseCase } from '@application/use-cases/service-order/get-service-order.use-case';
+import { AddPartToOrderUseCase } from '@application/use-cases/service-order/add-part-to-order.use-case';
+import { StartDiagnosisUseCase } from '@application/use-cases/service-order/start-diagnosis.use-case';
+import { CompleteOrderUseCase } from '@application/use-cases/service-order/complete-order.use-case';
+import { ApproveOrderUseCase } from '@application/use-cases/service-order/approve-order.use-case';
+import { DeliverOrderUseCase } from '@application/use-cases/service-order/deliver-order.use-case';
+import { CancelOrderUseCase } from '@application/use-cases/service-order/cancel-order.use-case';
 import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
 import { ServiceOrderRepository } from '@infrastructure/database/prisma/repositories/service-order.repository';
 import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
@@ -31,6 +29,7 @@ import { PartRepository } from '@infrastructure/database/prisma/repositories/par
 @Module({
   controllers: [ServiceOrdersController],
   providers: [
+    Logger,
     ListServiceOrdersByCustomerUseCase,
     ListServiceOrdersByStatusUseCase,
     GetAverageExecutionTimeUseCase,

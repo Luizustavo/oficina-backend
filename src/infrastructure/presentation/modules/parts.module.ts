@@ -1,21 +1,20 @@
-import {
-  ListLowStockPartsUseCase,
-  RemoveStockUseCase,
-  DeletePartUseCase,
-  CreatePartUseCase,
-  UpdatePartUseCase,
-  ListPartsUseCase,
-  AddStockUseCase,
-  GetPartUseCase,
-} from '@application/use-cases/part/part.use-cases';
+import { ListLowStockPartsUseCase } from '@application/use-cases/part/list-low-stock-parts.use-case';
+import { RemoveStockUseCase } from '@application/use-cases/part/remove-stock.use-case';
+import { DeletePartUseCase } from '@application/use-cases/part/delete-part.use-case';
+import { CreatePartUseCase } from '@application/use-cases/part/create-part.use-case';
+import { UpdatePartUseCase } from '@application/use-cases/part/update-part.use-case';
+import { ListPartsUseCase } from '@application/use-cases/part/list-parts.use-case';
+import { AddStockUseCase } from '@application/use-cases/part/add-stock.use-case';
+import { GetPartUseCase } from '@application/use-cases/part/get-part.use-case';
 import { PartsController } from '../controllers/parts.controller';
 import { IPartRepository } from '@domain/repositories/part.repository.interface';
 import { PartRepository } from '@infrastructure/database/prisma/repositories/part.repository';
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 
 @Module({
   controllers: [PartsController],
   providers: [
+    Logger,
     ListLowStockPartsUseCase,
     RemoveStockUseCase,
     CreatePartUseCase,

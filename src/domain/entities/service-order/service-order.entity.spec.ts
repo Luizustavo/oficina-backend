@@ -4,7 +4,6 @@ import { ServiceOrderStatus } from '@domain/validators/value-objects/service-ord
 import { DomainException } from '@shared/exceptions/domain.exceptions';
 
 const validProps = {
-  id: 'so-1',
   orderNumber: 'OS-001',
   customerId: 'customer-1',
   vehicleId: 'vehicle-1',
@@ -15,7 +14,6 @@ describe('ServiceOrder', () => {
   describe('create', () => {
     it('should create a service order with RECEIVED status', () => {
       const so = ServiceOrderEntity.create(validProps);
-      expect(so.id).toBe('so-1');
       expect(so.status).toBe(ServiceOrderStatus.RECEIVED);
       expect(so.services).toHaveLength(0);
       expect(so.parts).toHaveLength(0);

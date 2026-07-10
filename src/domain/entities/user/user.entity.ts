@@ -27,19 +27,22 @@ export class UserEntity {
     if (id) this._id = id;
   }
 
-  static create(props: CreateUserProps): UserEntity {
+  static create(props: CreateUserProps, id?: string): UserEntity {
     UserEntity.validate(props);
     const now = new Date();
-    return new UserEntity({
-      ...props,
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    });
+    return new UserEntity(
+      {
+        ...props,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      },
+      id,
+    );
   }
 
-  static reconstitute(props: UserProps): UserEntity {
-    return new UserEntity(props);
+  static reconstitute(props: UserProps, id?: string): UserEntity {
+    return new UserEntity(props, id);
   }
 
   private static validate(props: CreateUserProps): void {

@@ -22,7 +22,7 @@ export class PrismaServiceMapper {
   }
 
   public static toEntity(prisma: PrismaService): ServiceEntity {
-    const entity = new ServiceEntity(
+    return ServiceEntity.reconstitute(
       {
         name: prisma.name,
         description: prisma.description || undefined,
@@ -34,6 +34,5 @@ export class PrismaServiceMapper {
       },
       prisma.id,
     );
-    return entity;
   }
 }
