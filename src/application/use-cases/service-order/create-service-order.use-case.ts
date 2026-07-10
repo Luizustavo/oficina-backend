@@ -1,14 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
-import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
-import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
-import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
 import {
   NotFoundException,
   BusinessRuleException,
 } from '@shared/exceptions/domain.exceptions';
 import { CreateServiceOrderRequestDto } from '@application/dtos/request/service-order.dto';
+import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
 import { ServiceOrderResponseDto } from '@application/dtos/response/service-order.dto';
+import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
+import { Injectable, Logger } from '@nestjs/common';
+import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
+import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
 import { ServiceOrderMapper } from '@application/mappers/service-order.mapper';
 
 function generateOrderNumber(): string {

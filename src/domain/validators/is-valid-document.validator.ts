@@ -4,8 +4,8 @@ import {
   ValidationOptions,
 } from 'class-validator';
 import { CustomerType } from '@domain/enums/customer-type.enum';
-import { Cpf } from './value-objects/cpf.value-object';
 import { Cnpj } from './value-objects/cnpj.value-object';
+import { Cpf } from './value-objects/cpf.value-object';
 
 export function IsValidDocument(validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {

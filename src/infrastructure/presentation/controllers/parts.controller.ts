@@ -1,4 +1,9 @@
 import {
+  CreatePartRequestDto,
+  UpdatePartRequestDto,
+  StockOperationDto,
+} from '@application/dtos/request/part.dto';
+import {
   Controller,
   Delete,
   Patch,
@@ -8,6 +13,7 @@ import {
   Body,
   Get,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ListLowStockPartsUseCase } from '@application/use-cases/part/list-low-stock-parts.use-case';
 import { RemoveStockUseCase } from '@application/use-cases/part/remove-stock.use-case';
 import { CreatePartUseCase } from '@application/use-cases/part/create-part.use-case';
@@ -16,12 +22,6 @@ import { DeletePartUseCase } from '@application/use-cases/part/delete-part.use-c
 import { ListPartsUseCase } from '@application/use-cases/part/list-parts.use-case';
 import { AddStockUseCase } from '@application/use-cases/part/add-stock.use-case';
 import { GetPartUseCase } from '@application/use-cases/part/get-part.use-case';
-import {
-  CreatePartRequestDto,
-  UpdatePartRequestDto,
-  StockOperationDto,
-} from '@application/dtos/request/part.dto';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserRole } from '@domain/enums/user-role.enum';
 import { Roles } from '@infrastructure/presentation/decorators/roles.decorator';
 

@@ -1,11 +1,11 @@
-import { Logger } from '@nestjs/common';
 import { CreateServiceUseCase } from './create-service.use-case';
-import { GetServiceUseCase } from './get-service.use-case';
 import { ToggleServiceUseCase } from './toggle-service.use-case';
 import { DeleteServiceUseCase } from './delete-service.use-case';
 import { IServiceRepository } from '@domain/repositories/service.repository.interface';
-import { ServiceEntity } from '@domain/entities/service/service.entity';
+import { GetServiceUseCase } from './get-service.use-case';
 import { NotFoundException } from '@shared/exceptions/domain.exceptions';
+import { ServiceEntity } from '@domain/entities/service/service.entity';
+import { Logger } from '@nestjs/common';
 
 const makeRepo = (): jest.Mocked<IServiceRepository> => ({
   create: jest.fn(),

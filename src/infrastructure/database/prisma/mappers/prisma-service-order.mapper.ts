@@ -2,12 +2,12 @@ import {
   Prisma,
   ServiceOrder as PrismaServiceOrder,
 } from '@generated/prisma/client';
-import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
-import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
 import {
   ServiceItem,
   PartItem,
 } from '@domain/entities/service-order/service-order-items.value-object';
+import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
+import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
 
 export class PrismaServiceOrderMapper {
   private constructor() {

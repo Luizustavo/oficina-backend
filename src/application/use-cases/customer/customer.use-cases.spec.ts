@@ -1,16 +1,16 @@
-import { Logger } from '@nestjs/common';
-import { ListCustomersUseCase } from './list-customers.use-case';
-import { GetCustomerUseCase } from './get-customer.use-case';
-import { GetCustomerByDocumentUseCase } from './get-customer-by-document.use-case';
-import { UpdateCustomerUseCase } from './update-customer.use-case';
-import { DeleteCustomerUseCase } from './delete-customer.use-case';
-import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
-import { CustomerEntity } from '@domain/entities/customer/customer.entity';
-import { CustomerType } from '@domain/enums/customer-type.enum';
 import {
   NotFoundException,
   BusinessRuleException,
 } from '@shared/exceptions/domain.exceptions';
+import { GetCustomerByDocumentUseCase } from './get-customer-by-document.use-case';
+import { UpdateCustomerUseCase } from './update-customer.use-case';
+import { DeleteCustomerUseCase } from './delete-customer.use-case';
+import { ListCustomersUseCase } from './list-customers.use-case';
+import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
+import { GetCustomerUseCase } from './get-customer.use-case';
+import { CustomerEntity } from '@domain/entities/customer/customer.entity';
+import { CustomerType } from '@domain/enums/customer-type.enum';
+import { Logger } from '@nestjs/common';
 
 const makeRepo = (): jest.Mocked<ICustomerRepository> => ({
   findById: jest.fn(),

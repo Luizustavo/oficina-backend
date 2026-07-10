@@ -1,31 +1,31 @@
-import { Logger } from '@nestjs/common';
-import { StartDiagnosisUseCase } from './start-diagnosis.use-case';
-import { RequestApprovalUseCase } from './request-approval.use-case';
-import { ApproveOrderUseCase } from './approve-order.use-case';
-import { CompleteOrderUseCase } from './complete-order.use-case';
-import { DeliverOrderUseCase } from './deliver-order.use-case';
-import { CancelOrderUseCase } from './cancel-order.use-case';
-import { CreateServiceOrderUseCase } from './create-service-order.use-case';
-import { AddPartToOrderUseCase } from './add-part-to-order.use-case';
-import { GetServiceOrderUseCase } from './get-service-order.use-case';
-import { ListServiceOrdersUseCase } from './list-service-orders.use-case';
-import { ListServiceOrdersByCustomerUseCase } from './list-service-orders-by-customer.use-case';
-import { ListServiceOrdersByStatusUseCase } from './list-service-orders-by-status.use-case';
-import { AddServiceToOrderUseCase } from './add-service-to-order.use-case';
-import { TrackServiceOrderUseCase } from './track-service-order.use-case';
-import { GetAverageExecutionTimeUseCase } from './get-average-execution-time.use-case';
-import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
-import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
-import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
-import { IPartRepository } from '@domain/repositories/part.repository.interface';
-import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
-import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
 import {
   NotFoundException,
   InsufficientStockException,
   BusinessRuleException,
 } from '@shared/exceptions/domain.exceptions';
+import { ListServiceOrdersByCustomerUseCase } from './list-service-orders-by-customer.use-case';
+import { ListServiceOrdersByStatusUseCase } from './list-service-orders-by-status.use-case';
+import { GetAverageExecutionTimeUseCase } from './get-average-execution-time.use-case';
+import { CreateServiceOrderUseCase } from './create-service-order.use-case';
+import { ListServiceOrdersUseCase } from './list-service-orders.use-case';
+import { AddServiceToOrderUseCase } from './add-service-to-order.use-case';
+import { TrackServiceOrderUseCase } from './track-service-order.use-case';
+import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
+import { RequestApprovalUseCase } from './request-approval.use-case';
+import { GetServiceOrderUseCase } from './get-service-order.use-case';
+import { StartDiagnosisUseCase } from './start-diagnosis.use-case';
+import { AddPartToOrderUseCase } from './add-part-to-order.use-case';
+import { CompleteOrderUseCase } from './complete-order.use-case';
+import { ApproveOrderUseCase } from './approve-order.use-case';
+import { DeliverOrderUseCase } from './deliver-order.use-case';
+import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
+import { CancelOrderUseCase } from './cancel-order.use-case';
+import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
+import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
+import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
+import { IPartRepository } from '@domain/repositories/part.repository.interface';
 import { PartEntity } from '@domain/entities/part/part.entity';
+import { Logger } from '@nestjs/common';
 
 const makeOrderRepo = (): jest.Mocked<IServiceOrderRepository> => ({
   create: jest.fn(),

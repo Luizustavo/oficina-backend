@@ -1,13 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
-import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
-import { VehicleEntity } from '@domain/entities/vehicle/vehicle.entity';
 import {
   ConflictException,
   NotFoundException,
 } from '@shared/exceptions/domain.exceptions';
 import { CreateVehicleRequestDto } from '@application/dtos/request/vehicle.dto';
+import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
+import { Injectable, Logger } from '@nestjs/common';
+import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
 import { VehicleResponseDto } from '@application/dtos/response/vehicle.dto';
+import { VehicleEntity } from '@domain/entities/vehicle/vehicle.entity';
 import { VehicleMapper } from '@application/mappers/vehicle.mapper';
 
 @Injectable()

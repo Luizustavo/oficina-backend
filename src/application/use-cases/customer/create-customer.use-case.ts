@@ -1,8 +1,8 @@
 import { CreateCustomerRequestDto } from '@application/dtos/request/customer.dto';
 import { CustomerResponseDto } from '@application/dtos/response/customer.dto';
 import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
-import { ConflictException } from '@shared/exceptions/domain.exceptions';
 import { Injectable, Logger } from '@nestjs/common';
+import { ConflictException } from '@shared/exceptions/domain.exceptions';
 import { CustomerMapper } from '@application/mappers/customer.mapper';
 
 @Injectable()

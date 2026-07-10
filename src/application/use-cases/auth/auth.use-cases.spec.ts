@@ -1,11 +1,11 @@
 import { Logger, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { CreateUserUseCase } from './create-user.use-case';
 import { RefreshTokenUseCase } from './refresh-token.use-case';
+import { CreateUserUseCase } from './create-user.use-case';
+import { ConflictException } from '../../../shared/exceptions/domain.exceptions';
 import { IUserRepository } from '../../../domain/repositories/user.repository.interface';
+import { JwtService } from '@nestjs/jwt';
 import { UserEntity } from '../../../domain/entities/user/user.entity';
 import { UserRole } from '../../../domain/enums/user-role.enum';
-import { ConflictException } from '../../../shared/exceptions/domain.exceptions';
 
 const makeUserRepo = (): jest.Mocked<IUserRepository> => ({
   create: jest.fn(),

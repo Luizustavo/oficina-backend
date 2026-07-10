@@ -1,8 +1,8 @@
+import { UpdateVehicleRequestDto } from '@application/dtos/request/vehicle.dto';
 import { Injectable, Logger } from '@nestjs/common';
 import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
-import { NotFoundException } from '@shared/exceptions/domain.exceptions';
-import { UpdateVehicleRequestDto } from '@application/dtos/request/vehicle.dto';
 import { VehicleResponseDto } from '@application/dtos/response/vehicle.dto';
+import { NotFoundException } from '@shared/exceptions/domain.exceptions';
 import { VehicleMapper } from '@application/mappers/vehicle.mapper';
 
 @Injectable()

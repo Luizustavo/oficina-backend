@@ -1,8 +1,8 @@
-import { Logger } from '@nestjs/common';
 import { CreateCustomerUseCase } from './create-customer.use-case';
-import { CustomerType } from '../../../domain/enums/customer-type.enum';
 import { ICustomerRepository } from '../../../domain/repositories/customer.repository.interface';
 import { ConflictException } from '../../../shared/exceptions/domain.exceptions';
+import { CustomerType } from '../../../domain/enums/customer-type.enum';
+import { Logger } from '@nestjs/common';
 
 const makeRepo = (): jest.Mocked<ICustomerRepository> => ({
   findById: jest.fn(),

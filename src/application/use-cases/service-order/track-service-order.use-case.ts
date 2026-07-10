@@ -1,7 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
-import { NotFoundException } from '@shared/exceptions/domain.exceptions';
 import { TrackServiceOrderResponseDto } from '@application/dtos/response/service-order.dto';
+import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
+import { Injectable, Logger } from '@nestjs/common';
+import { NotFoundException } from '@shared/exceptions/domain.exceptions';
 
 @Injectable()
 export class TrackServiceOrderUseCase {

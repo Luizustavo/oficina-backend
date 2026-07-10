@@ -5,8 +5,8 @@ import {
 import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
 import { CustomerResponseDto } from '@application/dtos/response/customer.dto';
 import { Injectable, Logger } from '@nestjs/common';
-import { CustomerMapper } from '@application/mappers/customer.mapper';
 import { PaginationMapper } from '@application/mappers/pagination.mapper';
+import { CustomerMapper } from '@application/mappers/customer.mapper';
 
 @Injectable()
 export class ListCustomersUseCase {

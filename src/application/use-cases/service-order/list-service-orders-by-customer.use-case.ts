@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
 import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
 import { ServiceOrderResponseDto } from '@application/dtos/response/service-order.dto';
+import { Injectable, Logger } from '@nestjs/common';
 import { ServiceOrderMapper } from '@application/mappers/service-order.mapper';
 
 @Injectable()

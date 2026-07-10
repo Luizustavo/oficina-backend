@@ -1,8 +1,8 @@
-import { NotFoundException } from '@shared/exceptions/domain.exceptions';
 import { UpdateCustomerRequestDto } from '@application/dtos/request/customer.dto';
 import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
 import { CustomerResponseDto } from '@application/dtos/response/customer.dto';
 import { Injectable, Logger } from '@nestjs/common';
+import { NotFoundException } from '@shared/exceptions/domain.exceptions';
 import { CustomerMapper } from '@application/mappers/customer.mapper';
 
 @Injectable()

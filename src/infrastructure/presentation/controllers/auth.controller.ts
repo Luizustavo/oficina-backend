@@ -1,4 +1,3 @@
-import { IUserRepository } from '@domain/repositories/user.repository.interface';
 import {
   RefreshTokenRequestDto,
   CreateUserRequestDto,
@@ -12,6 +11,7 @@ import {
 } from '@infrastructure/presentation/decorators/current-user.decorator';
 import { RefreshTokenUseCase } from '@application/use-cases/auth/refresh-token.use-case';
 import { CreateUserUseCase } from '@application/use-cases/auth/create-user.use-case';
+import { IUserRepository } from '@domain/repositories/user.repository.interface';
 import { LoginUseCase } from '@application/use-cases/auth/login.use-case';
 import { UserRole } from '@domain/enums/user-role.enum';
 import { Public } from '@infrastructure/presentation/decorators/public.decorator';

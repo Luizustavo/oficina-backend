@@ -1,9 +1,9 @@
+import { PaginatedResponseDto } from '@application/dtos/common.dto';
 import { Injectable, Logger } from '@nestjs/common';
 import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
 import { VehicleResponseDto } from '@application/dtos/response/vehicle.dto';
-import { PaginatedResponseDto } from '@application/dtos/common.dto';
-import { VehicleMapper } from '@application/mappers/vehicle.mapper';
 import { PaginationMapper } from '@application/mappers/pagination.mapper';
+import { VehicleMapper } from '@application/mappers/vehicle.mapper';
 
 @Injectable()
 export class ListVehiclesUseCase {

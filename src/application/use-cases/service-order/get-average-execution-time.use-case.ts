@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
 import {
   AverageExecutionTimeResponseDto,
   ServiceExecutionMetrics,
 } from '@application/dtos/response/service-order.dto';
+import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
+import { Injectable, Logger } from '@nestjs/common';
 
 @Injectable()
 export class GetAverageExecutionTimeUseCase {

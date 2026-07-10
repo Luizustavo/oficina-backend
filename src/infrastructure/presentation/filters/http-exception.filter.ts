@@ -1,12 +1,4 @@
 import {
-  ExceptionFilter,
-  ArgumentsHost,
-  HttpException,
-  HttpStatus,
-  Logger,
-  Catch,
-} from '@nestjs/common';
-import {
   InvalidStatusTransitionException,
   InsufficientStockException,
   BusinessRuleException,
@@ -14,6 +6,14 @@ import {
   ConflictException,
   DomainException,
 } from '@shared/exceptions/domain.exceptions';
+import {
+  ExceptionFilter,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+  Logger,
+  Catch,
+} from '@nestjs/common';
 import { Response, Request } from 'express';
 
 @Catch()

@@ -5,9 +5,9 @@ import { CreatePartUseCase } from '@application/use-cases/part/create-part.use-c
 import { UpdatePartUseCase } from '@application/use-cases/part/update-part.use-case';
 import { ListPartsUseCase } from '@application/use-cases/part/list-parts.use-case';
 import { AddStockUseCase } from '@application/use-cases/part/add-stock.use-case';
-import { GetPartUseCase } from '@application/use-cases/part/get-part.use-case';
 import { PartsController } from '../controllers/parts.controller';
 import { IPartRepository } from '@domain/repositories/part.repository.interface';
+import { GetPartUseCase } from '@application/use-cases/part/get-part.use-case';
 import { PartRepository } from '@infrastructure/database/prisma/repositories/part.repository';
 import { Logger, Module } from '@nestjs/common';
 

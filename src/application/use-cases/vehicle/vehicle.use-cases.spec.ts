@@ -1,15 +1,15 @@
-import { Logger } from '@nestjs/common';
-import { CreateVehicleUseCase } from './create-vehicle.use-case';
-import { GetVehicleUseCase } from './get-vehicle.use-case';
-import { ListVehiclesByCustomerUseCase } from './list-vehicles-by-customer.use-case';
-import { DeleteVehicleUseCase } from './delete-vehicle.use-case';
-import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
-import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
-import { VehicleEntity } from '@domain/entities/vehicle/vehicle.entity';
 import {
   ConflictException,
   NotFoundException,
 } from '@shared/exceptions/domain.exceptions';
+import { ListVehiclesByCustomerUseCase } from './list-vehicles-by-customer.use-case';
+import { CreateVehicleUseCase } from './create-vehicle.use-case';
+import { DeleteVehicleUseCase } from './delete-vehicle.use-case';
+import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
+import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
+import { GetVehicleUseCase } from './get-vehicle.use-case';
+import { VehicleEntity } from '@domain/entities/vehicle/vehicle.entity';
+import { Logger } from '@nestjs/common';
 
 const makeVehicleRepo = (): jest.Mocked<IVehicleRepository> => ({
   create: jest.fn(),

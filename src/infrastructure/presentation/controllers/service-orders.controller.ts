@@ -1,3 +1,18 @@
+import {
+  CreateServiceOrderRequestDto,
+  AddServiceRequestDto,
+  AddPartRequestDto,
+} from '@application/dtos/request/service-order.dto';
+import {
+  Controller,
+  Query,
+  Param,
+  Patch,
+  Post,
+  Body,
+  Get,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ListServiceOrdersByCustomerUseCase } from '@application/use-cases/service-order/list-service-orders-by-customer.use-case';
 import { ListServiceOrdersByStatusUseCase } from '@application/use-cases/service-order/list-service-orders-by-status.use-case';
 import { GetAverageExecutionTimeUseCase } from '@application/use-cases/service-order/get-average-execution-time.use-case';
@@ -9,25 +24,10 @@ import { GetServiceOrderUseCase } from '@application/use-cases/service-order/get
 import { RequestApprovalUseCase } from '@application/use-cases/service-order/request-approval.use-case';
 import { AddPartToOrderUseCase } from '@application/use-cases/service-order/add-part-to-order.use-case';
 import { StartDiagnosisUseCase } from '@application/use-cases/service-order/start-diagnosis.use-case';
-import { ApproveOrderUseCase } from '@application/use-cases/service-order/approve-order.use-case';
 import { CompleteOrderUseCase } from '@application/use-cases/service-order/complete-order.use-case';
+import { ApproveOrderUseCase } from '@application/use-cases/service-order/approve-order.use-case';
 import { DeliverOrderUseCase } from '@application/use-cases/service-order/deliver-order.use-case';
 import { CancelOrderUseCase } from '@application/use-cases/service-order/cancel-order.use-case';
-import {
-  Controller,
-  Query,
-  Param,
-  Patch,
-  Post,
-  Body,
-  Get,
-} from '@nestjs/common';
-import {
-  CreateServiceOrderRequestDto,
-  AddServiceRequestDto,
-  AddPartRequestDto,
-} from '@application/dtos/request/service-order.dto';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
 import { UserRole } from '@domain/enums/user-role.enum';
 import { Public } from '@infrastructure/presentation/decorators/public.decorator';
