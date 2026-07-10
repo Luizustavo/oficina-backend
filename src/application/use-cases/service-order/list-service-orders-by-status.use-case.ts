@@ -22,6 +22,9 @@ export class ListServiceOrdersByStatusUseCase {
       `Retrieved ${orders.length} service orders with status: ${status}`,
     );
 
-    return orders.map((order) => ServiceOrderMapper.toResponse(order));
+    const response: ServiceOrderResponseDto[] = orders.map((order) =>
+      ServiceOrderMapper.toResponse(order),
+    );
+    return response;
   }
 }

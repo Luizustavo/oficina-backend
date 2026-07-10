@@ -19,6 +19,9 @@ export class ListServiceOrdersByCustomerUseCase {
       `Retrieved ${orders.length} service orders for customer: ${customerId}`,
     );
 
-    return orders.map((order) => ServiceOrderMapper.toResponse(order));
+    const response: ServiceOrderResponseDto[] = orders.map((order) =>
+      ServiceOrderMapper.toResponse(order),
+    );
+    return response;
   }
 }

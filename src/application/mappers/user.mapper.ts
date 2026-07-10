@@ -1,6 +1,10 @@
 import { CreateUserRequestDto } from '@application/dtos/request/auth.dto';
-import { UserResponseDto } from '@application/dtos/response/auth.dto';
+import {
+  AuthUserSummaryDto,
+  UserResponseDto,
+} from '@application/dtos/response/auth.dto';
 import { UserEntity } from '@domain/entities/user/user.entity';
+import { JwtPayload } from '@infrastructure/presentation/decorators/current-user.decorator';
 
 export class UserMapper {
   private constructor() {
@@ -24,6 +28,24 @@ export class UserMapper {
       role: user.role,
       isActive: user.isActive,
       createdAt: user.createdAt,
+    };
+  }
+
+  public static toJwtPayload(user: UserEntity): JwtPayload {
+    return {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      name: user.name,
+    };
+  }
+
+  public static toAuthSummary(user: UserEntity): AuthUserSummaryDto {
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
     };
   }
 }

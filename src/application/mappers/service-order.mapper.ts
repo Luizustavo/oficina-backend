@@ -1,4 +1,7 @@
-import { ServiceOrderResponseDto } from '@application/dtos/response/service-order.dto';
+import {
+  ServiceOrderResponseDto,
+  TrackServiceOrderResponseDto,
+} from '@application/dtos/response/service-order.dto';
 import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
 
 export class ServiceOrderMapper {
@@ -26,6 +29,23 @@ export class ServiceOrderMapper {
       deliveredAt: order.deliveredAt,
       createdAt: order.createdAt,
       updatedAt: order.updatedAt,
+    };
+  }
+
+  public static toTrackResponse(
+    order: ServiceOrderEntity,
+  ): TrackServiceOrderResponseDto {
+    return {
+      orderNumber: order.orderNumber,
+      status: order.status,
+      problemDescription: order.problemDescription,
+      services: order.services,
+      totalAmount: order.totalAmount,
+      createdAt: order.createdAt,
+      approvedAt: order.approvedAt,
+      startedAt: order.startedAt,
+      finishedAt: order.finishedAt,
+      deliveredAt: order.deliveredAt,
     };
   }
 }

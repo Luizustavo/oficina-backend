@@ -17,6 +17,9 @@ export class ListLowStockPartsUseCase {
 
     this.logger.log(`Retrieved ${parts.length} low-stock parts`);
 
-    return parts.map((part) => PartMapper.toResponse(part));
+    const response: PartResponseDto[] = parts.map((part) =>
+      PartMapper.toResponse(part),
+    );
+    return response;
   }
 }

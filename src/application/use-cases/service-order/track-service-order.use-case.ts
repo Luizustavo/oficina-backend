@@ -1,6 +1,7 @@
 import { TrackServiceOrderResponseDto } from '@application/dtos/response/service-order.dto';
 import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
 import { Injectable, Logger } from '@nestjs/common';
+import { ServiceOrderMapper } from '@application/mappers/service-order.mapper';
 import { NotFoundException } from '@shared/exceptions/domain.exceptions';
 
 @Injectable()
@@ -19,17 +20,8 @@ export class TrackServiceOrderUseCase {
       throw new NotFoundException('ServiceOrder', orderNumber);
     }
 
-    return {
-      orderNumber: order.orderNumber,
-      status: order.status,
-      problemDescription: order.problemDescription,
-      services: order.services,
-      totalAmount: order.totalAmount,
-      createdAt: order.createdAt,
-      approvedAt: order.approvedAt,
-      startedAt: order.startedAt,
-      finishedAt: order.finishedAt,
-      deliveredAt: order.deliveredAt,
-    };
+    const response: TrackServiceOrderResponseDto =
+      ServiceOrderMapper.toTrackResponse(order);
+    return response;
   }
 }

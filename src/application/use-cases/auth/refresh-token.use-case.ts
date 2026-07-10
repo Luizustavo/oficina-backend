@@ -3,6 +3,7 @@ import { RefreshResponseDto } from '@application/dtos/response/auth.dto';
 import { IUserRepository } from '@domain/repositories/user.repository.interface';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from '@infrastructure/presentation/decorators/current-user.decorator';
+import { UserMapper } from '@application/mappers/user.mapper';
 import { jwtConfig } from '@infrastructure/config/jwt.config';
 
 import type { StringValue } from 'ms';
@@ -37,12 +38,7 @@ export class RefreshTokenUseCase {
       throw new UnauthorizedException('User not found or inactive');
     }
 
-    const newPayload: JwtPayload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name,
-    };
+    const newPayload = UserMapper.toJwtPayload(user);
 
     const accessToken = this.jwtService.sign(newPayload, {
       secret: jwt.secret,
@@ -51,6 +47,7 @@ export class RefreshTokenUseCase {
 
     this.logger.log(`Access token refreshed successfully for user: ${user.id}`);
 
-    return { accessToken };
+    const response: RefreshResponseDto = { accessToken };
+    return response;
   }
 }

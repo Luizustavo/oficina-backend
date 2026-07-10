@@ -19,7 +19,12 @@ export class GetAverageExecutionTimeUseCase {
 
     if (orders.length === 0) {
       this.logger.log('No completed service orders found');
-      return { globalAverageMinutes: 0, completedOrders: 0, byService: [] };
+      const emptyResponse: AverageExecutionTimeResponseDto = {
+        globalAverageMinutes: 0,
+        completedOrders: 0,
+        byService: [],
+      };
+      return emptyResponse;
     }
 
     const durations = orders.map(
@@ -64,10 +69,11 @@ export class GetAverageExecutionTimeUseCase {
       `Average execution time calculated from ${orders.length} completed orders`,
     );
 
-    return {
+    const response: AverageExecutionTimeResponseDto = {
       globalAverageMinutes,
       completedOrders: orders.length,
       byService,
     };
+    return response;
   }
 }

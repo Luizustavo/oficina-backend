@@ -19,6 +19,9 @@ export class ListVehiclesByCustomerUseCase {
       `Retrieved ${vehicles.length} vehicles for customer: ${customerId}`,
     );
 
-    return vehicles.map((vehicle) => VehicleMapper.toResponse(vehicle));
+    const response: VehicleResponseDto[] = vehicles.map((vehicle) =>
+      VehicleMapper.toResponse(vehicle),
+    );
+    return response;
   }
 }
