@@ -1,0 +1,40 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    # Add required reviewers to the "production" Environment in
+    # Settings > Environments so this job pauses for manual approval
+    # before it runs.
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+        env:
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+      - run: npm run build
+
+      # TODO: replace this placeholder with the real deploy step once the
+      # production hosting target is defined. Common options:
+      #   - SSH into a VPS and run `docker compose pull && docker compose up -d`
+      #   - CLI deploy for a PaaS (railway up / flyctl deploy / render deploy)
+      #   - build+push a Docker image to a registry and trigger a remote pull
+      # Whatever secrets it needs (SSH key, API token, etc.) should be added
+      # under this repo's "production" GitHub Environment.
+      - name: Deploy (placeholder)
+        run: |
+          echo "TODO: no deploy target configured yet."
+          echo "This job currently only verifies the app builds successfully."

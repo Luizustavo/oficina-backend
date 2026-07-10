@@ -1,0 +1,143 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, staging, main]
+  pull_request:
+    branches: [dev, staging, main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20'
+  # Placeholder connection string, only used where prisma needs a syntactically
+  # valid DATABASE_URL but no live database (lint/unit/build jobs).
+  PLACEHOLDER_DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
+  unit-tests:
+    name: Unit Tests (coverage)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ env.PLACEHOLDER_DATABASE_URL }}
+      - run: npm test -- --coverage
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: oficina_test_db
+          POSTGRES_USER: oficina_user
+          POSTGRES_PASSWORD: oficina_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U oficina_user -d oficina_test_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      DATABASE_URL: postgresql://oficina_user:oficina_pass@localhost:5432/oficina_test_db
+      JWT_SECRET: ci-secret
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      JWT_REFRESH_EXPIRES_IN: 7d
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      # --passWithNoTests: this repo has no *.integration-spec.ts files yet;
+      # remove the flag once integration tests are added.
+      - run: npm run test:int -- --passWithNoTests
+
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: oficina_test_db
+          POSTGRES_USER: oficina_user
+          POSTGRES_PASSWORD: oficina_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U oficina_user -d oficina_test_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      DATABASE_URL: postgresql://oficina_user:oficina_pass@localhost:5432/oficina_test_db
+      JWT_SECRET: ci-secret
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      JWT_REFRESH_EXPIRES_IN: 7d
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+      - run: npm run test:e2e
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests, integration-tests, e2e-tests]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ env.PLACEHOLDER_DATABASE_URL }}
+      - run: npm run build
+      - name: Docker build (smoke test only, not pushed)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          build-args: |
+            DATABASE_URL=${{ env.PLACEHOLDER_DATABASE_URL }}
