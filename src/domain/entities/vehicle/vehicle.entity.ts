@@ -28,19 +28,22 @@ export class VehicleEntity {
     this.props = props;
     if (id) this._id = id;
   }
-  static create(props: CreateVehicleProps): VehicleEntity {
+  static create(props: CreateVehicleProps, id?: string): VehicleEntity {
     VehicleEntity.validate(props);
     const normalizedPlate = props.licensePlate
       .toUpperCase()
       .replace(/-/g, '')
       .trim();
     const now = new Date();
-    return new VehicleEntity({
-      ...props,
-      licensePlate: normalizedPlate,
-      createdAt: now,
-      updatedAt: now,
-    });
+    return new VehicleEntity(
+      {
+        ...props,
+        licensePlate: normalizedPlate,
+        createdAt: now,
+        updatedAt: now,
+      },
+      id,
+    );
   }
 
   static reconstitute(props: VehicleProps, id?: string): VehicleEntity {

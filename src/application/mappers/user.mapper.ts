@@ -1,8 +1,8 @@
-import { CreateUserRequestDto } from '@application/dtos/request/auth.dto';
 import {
   AuthUserSummaryDto,
   UserResponseDto,
 } from '@application/dtos/response/auth.dto';
+import { CreateUserRequestDto } from '@application/dtos/request/auth.dto';
 import { UserEntity } from '@domain/entities/user/user.entity';
 import { JwtPayload } from '@infrastructure/presentation/decorators/current-user.decorator';
 

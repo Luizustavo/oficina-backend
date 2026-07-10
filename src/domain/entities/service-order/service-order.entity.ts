@@ -42,7 +42,10 @@ export class ServiceOrderEntity {
     this.statusVO = new ServiceOrderStatusVO(props.status);
   }
 
-  static create(props: CreateServiceOrderProps): ServiceOrderEntity {
+  static create(
+    props: CreateServiceOrderProps,
+    id?: string,
+  ): ServiceOrderEntity {
     if (
       !props.problemDescription ||
       props.problemDescription.trim().length === 0
@@ -57,15 +60,18 @@ export class ServiceOrderEntity {
     }
 
     const now = new Date();
-    return new ServiceOrderEntity({
-      ...props,
-      status: ServiceOrderStatus.RECEIVED,
-      services: [],
-      parts: [],
-      totalAmount: 0,
-      createdAt: now,
-      updatedAt: now,
-    });
+    return new ServiceOrderEntity(
+      {
+        ...props,
+        status: ServiceOrderStatus.RECEIVED,
+        services: [],
+        parts: [],
+        totalAmount: 0,
+        createdAt: now,
+        updatedAt: now,
+      },
+      id,
+    );
   }
 
   static reconstitute(
