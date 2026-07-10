@@ -2,6 +2,7 @@ import { Logger, UnauthorizedException } from '@nestjs/common';
 import { RefreshTokenUseCase } from './refresh-token.use-case';
 import { CreateUserUseCase } from './create-user.use-case';
 import { ConflictException } from '../../../shared/exceptions/domain.exceptions';
+import { ListUsersUseCase } from './list-users.use-case';
 import { IUserRepository } from '../../../domain/repositories/user.repository.interface';
 import { JwtService } from '@nestjs/jwt';
 import { UserEntity } from '../../../domain/entities/user/user.entity';
@@ -65,6 +66,28 @@ describe('CreateUserUseCase', () => {
         role: UserRole.ADMIN,
       }),
     ).rejects.toThrow(ConflictException);
+  });
+});
+
+describe('ListUsersUseCase', () => {
+  it('should return all users mapped to response DTOs', async () => {
+    const repo = makeUserRepo();
+    repo.findAll.mockResolvedValue([makeUser()]);
+
+    const result = await new ListUsersUseCase(repo, makeLogger()).execute();
+
+    expect(result).toHaveLength(1);
+    expect(result[0].email).toBe('admin@oficina.com');
+    expect(result[0]).not.toHaveProperty('password');
+  });
+
+  it('should return an empty array when there are no users', async () => {
+    const repo = makeUserRepo();
+    repo.findAll.mockResolvedValue([]);
+
+    const result = await new ListUsersUseCase(repo, makeLogger()).execute();
+
+    expect(result).toHaveLength(0);
   });
 });
 

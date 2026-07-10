@@ -11,7 +11,7 @@ import {
 } from '@infrastructure/presentation/decorators/current-user.decorator';
 import { RefreshTokenUseCase } from '@application/use-cases/auth/refresh-token.use-case';
 import { CreateUserUseCase } from '@application/use-cases/auth/create-user.use-case';
-import { IUserRepository } from '@domain/repositories/user.repository.interface';
+import { ListUsersUseCase } from '@application/use-cases/auth/list-users.use-case';
 import { LoginUseCase } from '@application/use-cases/auth/login.use-case';
 import { UserRole } from '@domain/enums/user-role.enum';
 import { Public } from '@infrastructure/presentation/decorators/public.decorator';
@@ -23,8 +23,8 @@ export class AuthController {
   constructor(
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly createUserUseCase: CreateUserUseCase,
+    private readonly listUsersUseCase: ListUsersUseCase,
     private readonly loginUseCase: LoginUseCase,
-    private readonly userRepository: IUserRepository,
   ) {}
 
   @Post('login')
@@ -54,15 +54,7 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List all users (ADMIN only)' })
   async listUsers() {
-    const users = await this.userRepository.findAll();
-    return users.map((u) => ({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      role: u.role,
-      isActive: u.isActive,
-      createdAt: u.createdAt,
-    }));
+    return this.listUsersUseCase.execute();
   }
 
   @Get('me')
