@@ -1,60 +1,58 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Body,
-  Param,
-  Query,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { Roles } from '../decorators/roles.decorator';
-import { Public } from '../decorators/public.decorator';
-import { UserRole } from '../../../domain/user/user-role.enum';
-import { ServiceOrderStatus } from '../../../domain/value-objects/service-order-status.value-object';
-import {
-  CreateServiceOrderUseCase,
-  GetServiceOrderUseCase,
-  ListServiceOrdersUseCase,
-  ListServiceOrdersByCustomerUseCase,
-  ListServiceOrdersByStatusUseCase,
-  AddServiceToOrderUseCase,
-  AddPartToOrderUseCase,
-  StartDiagnosisUseCase,
-  RequestApprovalUseCase,
-  ApproveOrderUseCase,
-  CompleteOrderUseCase,
-  DeliverOrderUseCase,
-  CancelOrderUseCase,
-  TrackServiceOrderUseCase,
-  GetAverageExecutionTimeUseCase,
-} from '../../../application/use-cases/service-order/service-order.use-cases';
-import {
   CreateServiceOrderRequestDto,
   AddServiceRequestDto,
   AddPartRequestDto,
-} from '../../../application/dtos/request/service-order.dto';
+} from '@application/dtos/request/service-order.dto';
+import {
+  Controller,
+  Query,
+  Param,
+  Patch,
+  Post,
+  Body,
+  Get,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ListServiceOrdersByCustomerUseCase } from '@application/use-cases/service-order/list-service-orders-by-customer.use-case';
+import { ListServiceOrdersByStatusUseCase } from '@application/use-cases/service-order/list-service-orders-by-status.use-case';
+import { GetAverageExecutionTimeUseCase } from '@application/use-cases/service-order/get-average-execution-time.use-case';
+import { CreateServiceOrderUseCase } from '@application/use-cases/service-order/create-service-order.use-case';
+import { ListServiceOrdersUseCase } from '@application/use-cases/service-order/list-service-orders.use-case';
+import { AddServiceToOrderUseCase } from '@application/use-cases/service-order/add-service-to-order.use-case';
+import { TrackServiceOrderUseCase } from '@application/use-cases/service-order/track-service-order.use-case';
+import { GetServiceOrderUseCase } from '@application/use-cases/service-order/get-service-order.use-case';
+import { RequestApprovalUseCase } from '@application/use-cases/service-order/request-approval.use-case';
+import { AddPartToOrderUseCase } from '@application/use-cases/service-order/add-part-to-order.use-case';
+import { StartDiagnosisUseCase } from '@application/use-cases/service-order/start-diagnosis.use-case';
+import { CompleteOrderUseCase } from '@application/use-cases/service-order/complete-order.use-case';
+import { ApproveOrderUseCase } from '@application/use-cases/service-order/approve-order.use-case';
+import { DeliverOrderUseCase } from '@application/use-cases/service-order/deliver-order.use-case';
+import { CancelOrderUseCase } from '@application/use-cases/service-order/cancel-order.use-case';
+import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
+import { UserRole } from '@domain/enums/user-role.enum';
+import { Public } from '@infrastructure/presentation/decorators/public.decorator';
+import { Roles } from '@infrastructure/presentation/decorators/roles.decorator';
 
 @ApiTags('service-orders')
 @ApiBearerAuth()
 @Controller('api/service-orders')
 export class ServiceOrdersController {
   constructor(
-    private readonly createOrder: CreateServiceOrderUseCase,
-    private readonly getOrder: GetServiceOrderUseCase,
-    private readonly listOrders: ListServiceOrdersUseCase,
-    private readonly listByCustomer: ListServiceOrdersByCustomerUseCase,
-    private readonly listByStatus: ListServiceOrdersByStatusUseCase,
-    private readonly addService: AddServiceToOrderUseCase,
-    private readonly addPart: AddPartToOrderUseCase,
-    private readonly startDiagnosis: StartDiagnosisUseCase,
+    private readonly avgExecutionTime: GetAverageExecutionTimeUseCase,
     private readonly requestApproval: RequestApprovalUseCase,
-    private readonly approveOrder: ApproveOrderUseCase,
+    private readonly listByCustomer: ListServiceOrdersByCustomerUseCase,
+    private readonly startDiagnosis: StartDiagnosisUseCase,
     private readonly completeOrder: CompleteOrderUseCase,
     private readonly deliverOrder: DeliverOrderUseCase,
+    private readonly approveOrder: ApproveOrderUseCase,
+    private readonly listByStatus: ListServiceOrdersByStatusUseCase,
     private readonly cancelOrder: CancelOrderUseCase,
+    private readonly createOrder: CreateServiceOrderUseCase,
     private readonly trackOrder: TrackServiceOrderUseCase,
-    private readonly avgExecutionTime: GetAverageExecutionTimeUseCase,
+    private readonly listOrders: ListServiceOrdersUseCase,
+    private readonly addService: AddServiceToOrderUseCase,
+    private readonly getOrder: GetServiceOrderUseCase,
+    private readonly addPart: AddPartToOrderUseCase,
   ) {}
 
   @Post()

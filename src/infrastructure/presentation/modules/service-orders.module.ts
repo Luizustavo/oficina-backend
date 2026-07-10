@@ -1,56 +1,55 @@
-import { Module } from '@nestjs/common';
-import { ServiceOrdersController } from '../controllers/service-orders.controller';
-import {
-  CreateServiceOrderUseCase,
-  GetServiceOrderUseCase,
-  ListServiceOrdersUseCase,
-  ListServiceOrdersByCustomerUseCase,
-  ListServiceOrdersByStatusUseCase,
-  AddServiceToOrderUseCase,
-  AddPartToOrderUseCase,
-  StartDiagnosisUseCase,
-  RequestApprovalUseCase,
-  ApproveOrderUseCase,
-  CompleteOrderUseCase,
-  DeliverOrderUseCase,
-  CancelOrderUseCase,
-  TrackServiceOrderUseCase,
-  GetAverageExecutionTimeUseCase,
-} from '../../../application/use-cases/service-order/service-order.use-cases';
-import { ServiceOrderRepository } from '../../database/repositories/service-order.repository';
-import { CustomerRepository } from '../../database/repositories/customer.repository';
-import { VehicleRepository } from '../../database/repositories/vehicle.repository';
-import { ServiceRepository } from '../../database/repositories/service.repository';
-import { PartRepository } from '../../database/repositories/part.repository';
-import { SERVICE_ORDER_REPOSITORY } from '../../../domain/service-order/service-order.repository.interface';
-import { CUSTOMER_REPOSITORY } from '../../../domain/customer/customer.repository.interface';
-import { VEHICLE_REPOSITORY } from '../../../domain/vehicle/vehicle.repository.interface';
-import { SERVICE_REPOSITORY } from '../../../domain/service/service.repository.interface';
-import { PART_REPOSITORY } from '../../../domain/part/part.repository.interface';
+import { ListServiceOrdersByCustomerUseCase } from '@application/use-cases/service-order/list-service-orders-by-customer.use-case';
+import { ListServiceOrdersByStatusUseCase } from '@application/use-cases/service-order/list-service-orders-by-status.use-case';
+import { GetAverageExecutionTimeUseCase } from '@application/use-cases/service-order/get-average-execution-time.use-case';
+import { CreateServiceOrderUseCase } from '@application/use-cases/service-order/create-service-order.use-case';
+import { ListServiceOrdersUseCase } from '@application/use-cases/service-order/list-service-orders.use-case';
+import { TrackServiceOrderUseCase } from '@application/use-cases/service-order/track-service-order.use-case';
+import { AddServiceToOrderUseCase } from '@application/use-cases/service-order/add-service-to-order.use-case';
+import { ServiceOrdersController } from '@infrastructure/presentation/controllers/service-orders.controller';
+import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
+import { RequestApprovalUseCase } from '@application/use-cases/service-order/request-approval.use-case';
+import { GetServiceOrderUseCase } from '@application/use-cases/service-order/get-service-order.use-case';
+import { ServiceOrderRepository } from '@infrastructure/database/prisma/repositories/service-order.repository';
+import { AddPartToOrderUseCase } from '@application/use-cases/service-order/add-part-to-order.use-case';
+import { StartDiagnosisUseCase } from '@application/use-cases/service-order/start-diagnosis.use-case';
+import { CompleteOrderUseCase } from '@application/use-cases/service-order/complete-order.use-case';
+import { ApproveOrderUseCase } from '@application/use-cases/service-order/approve-order.use-case';
+import { DeliverOrderUseCase } from '@application/use-cases/service-order/deliver-order.use-case';
+import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
+import { CancelOrderUseCase } from '@application/use-cases/service-order/cancel-order.use-case';
+import { CustomerRepository } from '@infrastructure/database/prisma/repositories/customer.repository';
+import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
+import { IServiceRepository } from '@domain/repositories/service.repository.interface';
+import { VehicleRepository } from '@infrastructure/database/prisma/repositories/vehicle.repository';
+import { ServiceRepository } from '@infrastructure/database/prisma/repositories/service.repository';
+import { IPartRepository } from '@domain/repositories/part.repository.interface';
+import { Logger, Module } from '@nestjs/common';
+import { PartRepository } from '@infrastructure/database/prisma/repositories/part.repository';
 
 @Module({
   controllers: [ServiceOrdersController],
   providers: [
-    CreateServiceOrderUseCase,
-    GetServiceOrderUseCase,
-    ListServiceOrdersUseCase,
+    Logger,
     ListServiceOrdersByCustomerUseCase,
     ListServiceOrdersByStatusUseCase,
+    GetAverageExecutionTimeUseCase,
+    CreateServiceOrderUseCase,
+    ListServiceOrdersUseCase,
+    TrackServiceOrderUseCase,
     AddServiceToOrderUseCase,
+    RequestApprovalUseCase,
+    GetServiceOrderUseCase,
     AddPartToOrderUseCase,
     StartDiagnosisUseCase,
-    RequestApprovalUseCase,
-    ApproveOrderUseCase,
     CompleteOrderUseCase,
+    ApproveOrderUseCase,
     DeliverOrderUseCase,
     CancelOrderUseCase,
-    TrackServiceOrderUseCase,
-    GetAverageExecutionTimeUseCase,
-    { provide: SERVICE_ORDER_REPOSITORY, useClass: ServiceOrderRepository },
-    { provide: CUSTOMER_REPOSITORY, useClass: CustomerRepository },
-    { provide: VEHICLE_REPOSITORY, useClass: VehicleRepository },
-    { provide: SERVICE_REPOSITORY, useClass: ServiceRepository },
-    { provide: PART_REPOSITORY, useClass: PartRepository },
+    { provide: IServiceOrderRepository, useClass: ServiceOrderRepository },
+    { provide: ICustomerRepository, useClass: CustomerRepository },
+    { provide: IVehicleRepository, useClass: VehicleRepository },
+    { provide: IServiceRepository, useClass: ServiceRepository },
+    { provide: IPartRepository, useClass: PartRepository },
   ],
 })
 export class ServiceOrdersModule {}

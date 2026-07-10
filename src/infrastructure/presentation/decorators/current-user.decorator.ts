@@ -1,5 +1,5 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { UserRole } from '../../../domain/user/user-role.enum';
+import { UserRole } from '@domain/enums/user-role.enum';
 
 export interface JwtPayload {
   sub: string;

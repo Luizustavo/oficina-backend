@@ -1,0 +1,99 @@
+import { DomainException } from '@shared/exceptions/domain.exceptions';
+import { VehicleEntity } from './vehicle.entity';
+
+const validProps = {
+  customerId: 'customer-1',
+  licensePlate: 'ABC1234',
+  brand: 'Toyota',
+  model: 'Corolla',
+  year: 2020,
+  color: 'Preto',
+};
+
+describe('Vehicle', () => {
+  describe('create', () => {
+    it('should create a vehicle with valid props', () => {
+      const vehicle = VehicleEntity.create(validProps);
+      expect(vehicle.licensePlate).toBe('ABC1234');
+      expect(vehicle.brand).toBe('Toyota');
+      expect(vehicle.createdAt).toBeInstanceOf(Date);
+    });
+
+    it('should normalize license plate to uppercase', () => {
+      const vehicle = VehicleEntity.create({
+        ...validProps,
+        licensePlate: 'abc1234',
+      });
+      expect(vehicle.licensePlate).toBe('ABC1234');
+    });
+
+    it('should accept Mercosul plates', () => {
+      const vehicle = VehicleEntity.create({
+        ...validProps,
+        licensePlate: 'ABC1D23',
+      });
+      expect(vehicle.licensePlate).toBe('ABC1D23');
+    });
+
+    it('should throw DomainException for empty brand', () => {
+      expect(() => VehicleEntity.create({ ...validProps, brand: '' })).toThrow(
+        DomainException,
+      );
+    });
+
+    it('should throw DomainException for empty model', () => {
+      expect(() => VehicleEntity.create({ ...validProps, model: '' })).toThrow(
+        DomainException,
+      );
+    });
+
+    it('should throw DomainException for missing customerId', () => {
+      expect(() =>
+        VehicleEntity.create({ ...validProps, customerId: '' }),
+      ).toThrow(DomainException);
+    });
+
+    it('should throw DomainException for year before 1900', () => {
+      expect(() => VehicleEntity.create({ ...validProps, year: 1800 })).toThrow(
+        DomainException,
+      );
+    });
+
+    it('should throw DomainException for year far in the future', () => {
+      expect(() => VehicleEntity.create({ ...validProps, year: 9999 })).toThrow(
+        DomainException,
+      );
+    });
+  });
+
+  describe('update', () => {
+    it('should update brand, model, year, and color', () => {
+      const vehicle = VehicleEntity.create(validProps);
+      vehicle.update({
+        brand: 'Honda',
+        model: 'Civic',
+        year: 2022,
+        color: 'Branco',
+      });
+      expect(vehicle.brand).toBe('Honda');
+      expect(vehicle.model).toBe('Civic');
+      expect(vehicle.year).toBe(2022);
+      expect(vehicle.color).toBe('Branco');
+    });
+
+    it('should throw DomainException when updating brand to empty string', () => {
+      const vehicle = VehicleEntity.create(validProps);
+      expect(() => vehicle.update({ brand: '' })).toThrow(DomainException);
+    });
+
+    it('should throw DomainException when updating model to empty string', () => {
+      const vehicle = VehicleEntity.create(validProps);
+      expect(() => vehicle.update({ model: '' })).toThrow(DomainException);
+    });
+
+    it('should throw DomainException when updating year to invalid value', () => {
+      const vehicle = VehicleEntity.create(validProps);
+      expect(() => vehicle.update({ year: 1800 })).toThrow(DomainException);
+    });
+  });
+});
