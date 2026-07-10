@@ -1,16 +1,15 @@
 import {
-  CreateVehicleUseCase,
-  GetVehicleUseCase,
-  ListVehiclesByCustomerUseCase,
-  DeleteVehicleUseCase,
-} from './vehicle.use-cases';
-import { IVehicleRepository } from '../../../domain/vehicle/vehicle.repository.interface';
-import { ICustomerRepository } from '../../../domain/customer/customer.repository.interface';
-import { Vehicle } from '../../../domain/vehicle/vehicle.entity';
-import {
   ConflictException,
   NotFoundException,
-} from '../../../shared/exceptions/domain.exceptions';
+} from '@shared/exceptions/domain.exceptions';
+import { ListVehiclesByCustomerUseCase } from './list-vehicles-by-customer.use-case';
+import { CreateVehicleUseCase } from './create-vehicle.use-case';
+import { DeleteVehicleUseCase } from './delete-vehicle.use-case';
+import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
+import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
+import { GetVehicleUseCase } from './get-vehicle.use-case';
+import { VehicleEntity } from '@domain/entities/vehicle/vehicle.entity';
+import { Logger } from '@nestjs/common';
 
 const makeVehicleRepo = (): jest.Mocked<IVehicleRepository> => ({
   create: jest.fn(),
@@ -29,17 +28,26 @@ const makeCustomerRepo = (): jest.Mocked<
   existsById: jest.fn(),
 });
 
+const makeLogger = (): jest.Mocked<Logger> =>
+  ({
+    log: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  }) as unknown as jest.Mocked<Logger>;
+
 const makeVehicle = () =>
-  Vehicle.reconstitute({
-    id: 'v-1',
-    customerId: 'c-1',
-    licensePlate: 'ABC1234',
-    brand: 'Toyota',
-    model: 'Corolla',
-    year: 2020,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
+  VehicleEntity.reconstitute(
+    {
+      customerId: 'c-1',
+      licensePlate: 'ABC1234',
+      brand: 'Toyota',
+      model: 'Corolla',
+      year: 2020,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    'v-1',
+  );
 
 describe('CreateVehicleUseCase', () => {
   const validDto = {
@@ -60,6 +68,7 @@ describe('CreateVehicleUseCase', () => {
     const result = await new CreateVehicleUseCase(
       vehicleRepo,
       customerRepo,
+      makeLogger(),
     ).execute(validDto);
     expect(result.licensePlate).toBe('ABC1234');
   });
@@ -71,7 +80,9 @@ describe('CreateVehicleUseCase', () => {
     } as any;
 
     await expect(
-      new CreateVehicleUseCase(vehicleRepo, customerRepo).execute(validDto),
+      new CreateVehicleUseCase(vehicleRepo, customerRepo, makeLogger()).execute(
+        validDto,
+      ),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -83,7 +94,9 @@ describe('CreateVehicleUseCase', () => {
     vehicleRepo.findByLicensePlate.mockResolvedValue(makeVehicle());
 
     await expect(
-      new CreateVehicleUseCase(vehicleRepo, customerRepo).execute(validDto),
+      new CreateVehicleUseCase(vehicleRepo, customerRepo, makeLogger()).execute(
+        validDto,
+      ),
     ).rejects.toThrow(ConflictException);
   });
 });
@@ -93,7 +106,9 @@ describe('GetVehicleUseCase', () => {
     const repo = makeVehicleRepo();
     repo.findById.mockResolvedValue(makeVehicle());
 
-    const result = await new GetVehicleUseCase(repo).execute('v-1');
+    const result = await new GetVehicleUseCase(repo, makeLogger()).execute(
+      'v-1',
+    );
     expect(result.id).toBe('v-1');
   });
 
@@ -101,7 +116,7 @@ describe('GetVehicleUseCase', () => {
     const repo = makeVehicleRepo();
     repo.findById.mockResolvedValue(null);
     await expect(
-      new GetVehicleUseCase(repo).execute('missing'),
+      new GetVehicleUseCase(repo, makeLogger()).execute('missing'),
     ).rejects.toThrow(NotFoundException);
   });
 });
@@ -111,7 +126,10 @@ describe('ListVehiclesByCustomerUseCase', () => {
     const repo = makeVehicleRepo();
     repo.findByCustomerId.mockResolvedValue([makeVehicle()]);
 
-    const result = await new ListVehiclesByCustomerUseCase(repo).execute('c-1');
+    const result = await new ListVehiclesByCustomerUseCase(
+      repo,
+      makeLogger(),
+    ).execute('c-1');
     expect(result).toHaveLength(1);
     expect(result[0].customerId).toBe('c-1');
   });
@@ -125,7 +143,7 @@ describe('DeleteVehicleUseCase', () => {
     repo.delete.mockResolvedValue();
 
     await expect(
-      new DeleteVehicleUseCase(repo).execute('v-1'),
+      new DeleteVehicleUseCase(repo, makeLogger()).execute('v-1'),
     ).resolves.toBeUndefined();
   });
 
@@ -135,7 +153,7 @@ describe('DeleteVehicleUseCase', () => {
     repo.hasServiceOrders.mockResolvedValue(true);
 
     await expect(
-      new DeleteVehicleUseCase(repo).execute('v-1'),
+      new DeleteVehicleUseCase(repo, makeLogger()).execute('v-1'),
     ).rejects.toThrow();
   });
 });

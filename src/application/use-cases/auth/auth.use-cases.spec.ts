@@ -1,11 +1,12 @@
-import { CreateUserUseCase } from './create-user.use-case';
+import { Logger, UnauthorizedException } from '@nestjs/common';
 import { RefreshTokenUseCase } from './refresh-token.use-case';
-import { IUserRepository } from '../../../domain/user/user.repository.interface';
-import { User } from '../../../domain/user/user.entity';
-import { UserRole } from '../../../domain/user/user-role.enum';
+import { CreateUserUseCase } from './create-user.use-case';
 import { ConflictException } from '../../../shared/exceptions/domain.exceptions';
-import { UnauthorizedException } from '@nestjs/common';
+import { ListUsersUseCase } from './list-users.use-case';
+import { IUserRepository } from '../../../domain/repositories/user.repository.interface';
 import { JwtService } from '@nestjs/jwt';
+import { UserEntity } from '../../../domain/entities/user/user.entity';
+import { UserRole } from '../../../domain/enums/user-role.enum';
 
 const makeUserRepo = (): jest.Mocked<IUserRepository> => ({
   create: jest.fn(),
@@ -15,17 +16,26 @@ const makeUserRepo = (): jest.Mocked<IUserRepository> => ({
   update: jest.fn(),
 });
 
+const makeLogger = (): jest.Mocked<Logger> =>
+  ({
+    log: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  }) as unknown as jest.Mocked<Logger>;
+
 const makeUser = () =>
-  User.reconstitute({
-    id: 'u-1',
-    name: 'Admin',
-    email: 'admin@oficina.com',
-    password: '$2b$12$hashedpassword',
-    role: UserRole.ADMIN,
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  });
+  UserEntity.reconstitute(
+    {
+      name: 'Admin',
+      email: 'admin@oficina.com',
+      password: '$2b$12$hashedpassword',
+      role: UserRole.ADMIN,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    'u-1',
+  );
 
 describe('CreateUserUseCase', () => {
   it('should create a user when email is not taken', async () => {
@@ -33,7 +43,7 @@ describe('CreateUserUseCase', () => {
     repo.findByEmail.mockResolvedValue(null);
     repo.create.mockImplementation(async (u) => u);
 
-    const result = await new CreateUserUseCase(repo).execute({
+    const result = await new CreateUserUseCase(repo, makeLogger()).execute({
       name: 'Admin',
       email: 'admin@oficina.com',
       password: 'Admin123!',
@@ -49,13 +59,35 @@ describe('CreateUserUseCase', () => {
     repo.findByEmail.mockResolvedValue(makeUser());
 
     await expect(
-      new CreateUserUseCase(repo).execute({
+      new CreateUserUseCase(repo, makeLogger()).execute({
         name: 'Admin',
         email: 'admin@oficina.com',
         password: 'Admin123!',
         role: UserRole.ADMIN,
       }),
     ).rejects.toThrow(ConflictException);
+  });
+});
+
+describe('ListUsersUseCase', () => {
+  it('should return all users mapped to response DTOs', async () => {
+    const repo = makeUserRepo();
+    repo.findAll.mockResolvedValue([makeUser()]);
+
+    const result = await new ListUsersUseCase(repo, makeLogger()).execute();
+
+    expect(result).toHaveLength(1);
+    expect(result[0].email).toBe('admin@oficina.com');
+    expect(result[0]).not.toHaveProperty('password');
+  });
+
+  it('should return an empty array when there are no users', async () => {
+    const repo = makeUserRepo();
+    repo.findAll.mockResolvedValue([]);
+
+    const result = await new ListUsersUseCase(repo, makeLogger()).execute();
+
+    expect(result).toHaveLength(0);
   });
 });
 
@@ -81,9 +113,11 @@ describe('RefreshTokenUseCase', () => {
       name: 'Admin',
     });
 
-    const result = await new RefreshTokenUseCase(repo, jwt).execute(
-      'valid-token',
-    );
+    const result = await new RefreshTokenUseCase(
+      repo,
+      jwt,
+      makeLogger(),
+    ).execute('valid-token');
     expect(result.accessToken).toBe('new-access-token');
   });
 
@@ -97,7 +131,7 @@ describe('RefreshTokenUseCase', () => {
     } as any;
 
     await expect(
-      new RefreshTokenUseCase(repo, jwt).execute('bad-token'),
+      new RefreshTokenUseCase(repo, jwt, makeLogger()).execute('bad-token'),
     ).rejects.toThrow(UnauthorizedException);
   });
 
@@ -112,22 +146,24 @@ describe('RefreshTokenUseCase', () => {
     });
 
     await expect(
-      new RefreshTokenUseCase(repo, jwt).execute('token'),
+      new RefreshTokenUseCase(repo, jwt, makeLogger()).execute('token'),
     ).rejects.toThrow(UnauthorizedException);
   });
 
   it('should throw UnauthorizedException when user is inactive', async () => {
     const repo = makeUserRepo();
-    const user = User.reconstitute({
-      id: 'u-1',
-      name: 'Admin',
-      email: 'admin@oficina.com',
-      password: 'x',
-      role: UserRole.ADMIN,
-      isActive: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    const user = UserEntity.reconstitute(
+      {
+        name: 'Admin',
+        email: 'admin@oficina.com',
+        password: 'x',
+        role: UserRole.ADMIN,
+        isActive: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      'u-1',
+    );
     repo.findById.mockResolvedValue(user);
     const jwt = makeJwtService({
       sub: 'u-1',
@@ -137,7 +173,7 @@ describe('RefreshTokenUseCase', () => {
     });
 
     await expect(
-      new RefreshTokenUseCase(repo, jwt).execute('token'),
+      new RefreshTokenUseCase(repo, jwt, makeLogger()).execute('token'),
     ).rejects.toThrow(UnauthorizedException);
   });
 });

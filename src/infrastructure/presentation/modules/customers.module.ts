@@ -1,29 +1,26 @@
-import { Module } from '@nestjs/common';
-import { CustomersController } from '../controllers/customers.controller';
-import { CreateCustomerUseCase } from '../../../application/use-cases/customer/create-customer.use-case';
-import {
-  ListCustomersUseCase,
-  GetCustomerUseCase,
-  GetCustomerByDocumentUseCase,
-} from '../../../application/use-cases/customer/list-customers.use-case';
-import {
-  UpdateCustomerUseCase,
-  DeleteCustomerUseCase,
-} from '../../../application/use-cases/customer/update-customer.use-case';
-import { CustomerRepository } from '../../database/repositories/customer.repository';
-import { CUSTOMER_REPOSITORY } from '../../../domain/customer/customer.repository.interface';
+import { GetCustomerByDocumentUseCase } from '@application/use-cases/customer/get-customer-by-document.use-case';
+import { UpdateCustomerUseCase } from '@application/use-cases/customer/update-customer.use-case';
+import { DeleteCustomerUseCase } from '@application/use-cases/customer/delete-customer.use-case';
+import { CreateCustomerUseCase } from '@application/use-cases/customer/create-customer.use-case';
+import { ListCustomersUseCase } from '@application/use-cases/customer/list-customers.use-case';
+import { CustomersController } from '@infrastructure/presentation/controllers/customers.controller';
+import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
+import { GetCustomerUseCase } from '@application/use-cases/customer/get-customer.use-case';
+import { CustomerRepository } from '@infrastructure/database/prisma/repositories/customer.repository';
+import { Logger, Module } from '@nestjs/common';
 
 @Module({
   controllers: [CustomersController],
   providers: [
-    CreateCustomerUseCase,
-    ListCustomersUseCase,
-    GetCustomerUseCase,
+    Logger,
     GetCustomerByDocumentUseCase,
     UpdateCustomerUseCase,
     DeleteCustomerUseCase,
-    { provide: CUSTOMER_REPOSITORY, useClass: CustomerRepository },
+    CreateCustomerUseCase,
+    ListCustomersUseCase,
+    GetCustomerUseCase,
+    { provide: ICustomerRepository, useClass: CustomerRepository },
   ],
-  exports: [{ provide: CUSTOMER_REPOSITORY, useClass: CustomerRepository }],
+  exports: [{ provide: ICustomerRepository, useClass: CustomerRepository }],
 })
 export class CustomersModule {}

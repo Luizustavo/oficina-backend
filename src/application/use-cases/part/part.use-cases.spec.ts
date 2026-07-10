@@ -1,20 +1,19 @@
 import {
-  AddStockUseCase,
-  RemoveStockUseCase,
-  GetPartUseCase,
-  ListLowStockPartsUseCase,
-  CreatePartUseCase,
-  ListPartsUseCase,
-  UpdatePartUseCase,
-  DeletePartUseCase,
-} from './part.use-cases';
-import { IPartRepository } from '../../../domain/part/part.repository.interface';
-import { Part } from '../../../domain/part/part.entity';
-import {
   NotFoundException,
   DomainException,
   ConflictException,
-} from '../../../shared/exceptions/domain.exceptions';
+} from '@shared/exceptions/domain.exceptions';
+import { ListLowStockPartsUseCase } from './list-low-stock-parts.use-case';
+import { RemoveStockUseCase } from './remove-stock.use-case';
+import { CreatePartUseCase } from './create-part.use-case';
+import { UpdatePartUseCase } from './update-part.use-case';
+import { DeletePartUseCase } from './delete-part.use-case';
+import { ListPartsUseCase } from './list-parts.use-case';
+import { AddStockUseCase } from './add-stock.use-case';
+import { IPartRepository } from '@domain/repositories/part.repository.interface';
+import { GetPartUseCase } from './get-part.use-case';
+import { PartEntity } from '@domain/entities/part/part.entity';
+import { Logger } from '@nestjs/common';
 
 const makeRepo = (): jest.Mocked<IPartRepository> => ({
   create: jest.fn(),
@@ -26,16 +25,27 @@ const makeRepo = (): jest.Mocked<IPartRepository> => ({
   delete: jest.fn(),
 });
 
-const makePart = (overrides: Partial<Parameters<typeof Part.create>[0]> = {}) =>
-  Part.create({
-    id: 'part-1',
-    name: 'Filtro de Óleo',
-    code: 'FO-001',
-    price: 25.9,
-    stockQuantity: 10,
-    minStockQuantity: 3,
-    ...overrides,
-  });
+const makeLogger = (): jest.Mocked<Logger> =>
+  ({
+    log: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  }) as unknown as jest.Mocked<Logger>;
+
+const makePart = (
+  overrides: Partial<Parameters<typeof PartEntity.create>[0]> = {},
+) =>
+  PartEntity.create(
+    {
+      name: 'Filtro de Óleo',
+      code: 'FO-001',
+      price: 25.9,
+      stockQuantity: 10,
+      minStockQuantity: 3,
+      ...overrides,
+    },
+    'part-1',
+  );
 
 describe('GetPartUseCase', () => {
   it('should return the part when found', async () => {
@@ -43,7 +53,9 @@ describe('GetPartUseCase', () => {
     const part = makePart();
     repo.findById.mockResolvedValue(part);
 
-    const result = await new GetPartUseCase(repo).execute('part-1');
+    const result = await new GetPartUseCase(repo, makeLogger()).execute(
+      'part-1',
+    );
 
     expect(result.id).toBe('part-1');
     expect(result.name).toBe('Filtro de Óleo');
@@ -53,9 +65,9 @@ describe('GetPartUseCase', () => {
     const repo = makeRepo();
     repo.findById.mockResolvedValue(null);
 
-    await expect(new GetPartUseCase(repo).execute('missing')).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(
+      new GetPartUseCase(repo, makeLogger()).execute('missing'),
+    ).rejects.toThrow(NotFoundException);
   });
 });
 
@@ -65,7 +77,7 @@ describe('AddStockUseCase', () => {
 
   beforeEach(() => {
     repo = makeRepo();
-    useCase = new AddStockUseCase(repo);
+    useCase = new AddStockUseCase(repo, makeLogger());
   });
 
   it('should add stock and persist the updated part', async () => {
@@ -99,7 +111,7 @@ describe('RemoveStockUseCase', () => {
 
   beforeEach(() => {
     repo = makeRepo();
-    useCase = new RemoveStockUseCase(repo);
+    useCase = new RemoveStockUseCase(repo, makeLogger());
   });
 
   it('should remove stock and persist the updated part', async () => {
@@ -135,7 +147,10 @@ describe('ListLowStockPartsUseCase', () => {
     const lowStockPart = makePart({ stockQuantity: 2, minStockQuantity: 3 });
     repo.findLowStock.mockResolvedValue([lowStockPart]);
 
-    const result = await new ListLowStockPartsUseCase(repo).execute();
+    const result = await new ListLowStockPartsUseCase(
+      repo,
+      makeLogger(),
+    ).execute();
 
     expect(result).toHaveLength(1);
     expect(result[0].isLowStock).toBe(true);
@@ -145,7 +160,10 @@ describe('ListLowStockPartsUseCase', () => {
     const repo = makeRepo();
     repo.findLowStock.mockResolvedValue([]);
 
-    const result = await new ListLowStockPartsUseCase(repo).execute();
+    const result = await new ListLowStockPartsUseCase(
+      repo,
+      makeLogger(),
+    ).execute();
 
     expect(result).toHaveLength(0);
   });
@@ -157,7 +175,7 @@ describe('CreatePartUseCase', () => {
     repo.findByCode.mockResolvedValue(null);
     repo.create.mockImplementation(async (p) => p);
 
-    const result = await new CreatePartUseCase(repo).execute({
+    const result = await new CreatePartUseCase(repo, makeLogger()).execute({
       name: 'Filtro de Óleo',
       code: 'FO-001',
       price: 25,
@@ -171,7 +189,7 @@ describe('CreatePartUseCase', () => {
     const repo = makeRepo();
     repo.findByCode.mockResolvedValue(makePart());
     await expect(
-      new CreatePartUseCase(repo).execute({
+      new CreatePartUseCase(repo, makeLogger()).execute({
         name: 'X',
         code: 'FO-001',
         price: 10,
@@ -187,7 +205,7 @@ describe('ListPartsUseCase', () => {
     const repo = makeRepo();
     repo.findAll.mockResolvedValue({ data: [makePart()], total: 1 });
 
-    const result = await new ListPartsUseCase(repo).execute({
+    const result = await new ListPartsUseCase(repo, makeLogger()).execute({
       page: 1,
       limit: 10,
     });
@@ -202,9 +220,12 @@ describe('UpdatePartUseCase', () => {
     repo.findById.mockResolvedValue(makePart());
     repo.update.mockImplementation(async (p) => p);
 
-    const result = await new UpdatePartUseCase(repo).execute('part-1', {
-      name: 'Filtro Novo',
-    });
+    const result = await new UpdatePartUseCase(repo, makeLogger()).execute(
+      'part-1',
+      {
+        name: 'Filtro Novo',
+      },
+    );
     expect(result.name).toBe('Filtro Novo');
   });
 
@@ -212,7 +233,7 @@ describe('UpdatePartUseCase', () => {
     const repo = makeRepo();
     repo.findById.mockResolvedValue(null);
     await expect(
-      new UpdatePartUseCase(repo).execute('missing', {}),
+      new UpdatePartUseCase(repo, makeLogger()).execute('missing', {}),
     ).rejects.toThrow(NotFoundException);
   });
 });
@@ -224,7 +245,7 @@ describe('DeletePartUseCase', () => {
     repo.delete.mockResolvedValue();
 
     await expect(
-      new DeletePartUseCase(repo).execute('part-1'),
+      new DeletePartUseCase(repo, makeLogger()).execute('part-1'),
     ).resolves.toBeUndefined();
     expect(repo.delete).toHaveBeenCalledWith('part-1');
   });
@@ -233,7 +254,7 @@ describe('DeletePartUseCase', () => {
     const repo = makeRepo();
     repo.findById.mockResolvedValue(null);
     await expect(
-      new DeletePartUseCase(repo).execute('missing'),
+      new DeletePartUseCase(repo, makeLogger()).execute('missing'),
     ).rejects.toThrow(NotFoundException);
   });
 });

@@ -1,13 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
 import {
+  IsOptional,
+  MinLength,
+  IsString,
   IsEmail,
   IsEnum,
-  IsOptional,
-  IsString,
-  MinLength,
 } from 'class-validator';
-import { CustomerType } from '../../../domain/customer/customer-type.enum';
-import { IsValidDocument } from '../validators/is-valid-document.validator';
+import { IsValidDocument } from '@domain/validators/is-valid-document.validator';
+import { CustomerType } from '@domain/enums/customer-type.enum';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateCustomerRequestDto {
   @ApiProperty({ example: 'Carlos Pereira' })
@@ -41,6 +41,10 @@ export class CreateCustomerRequestDto {
 }
 
 export class UpdateCustomerRequestDto {
+  @ApiProperty({ example: '1254524', required: true })
+  @IsString()
+  id!: string;
+
   @ApiProperty({ example: 'Carlos A. Pereira', required: false })
   @IsString()
   @IsOptional()

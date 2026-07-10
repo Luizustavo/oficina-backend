@@ -1,45 +1,43 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Delete,
-  Body,
-  Param,
-  Query,
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { Roles } from '../decorators/roles.decorator';
-import { UserRole } from '../../../domain/user/user-role.enum';
-import {
-  CreatePartUseCase,
-  GetPartUseCase,
-  ListPartsUseCase,
-  ListLowStockPartsUseCase,
-  UpdatePartUseCase,
-  AddStockUseCase,
-  RemoveStockUseCase,
-  DeletePartUseCase,
-} from '../../../application/use-cases/part/part.use-cases';
-import {
   CreatePartRequestDto,
   UpdatePartRequestDto,
   StockOperationDto,
-} from '../../../application/dtos/request/part.dto';
+} from '@application/dtos/request/part.dto';
+import {
+  Controller,
+  Delete,
+  Patch,
+  Query,
+  Param,
+  Post,
+  Body,
+  Get,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ListLowStockPartsUseCase } from '@application/use-cases/part/list-low-stock-parts.use-case';
+import { RemoveStockUseCase } from '@application/use-cases/part/remove-stock.use-case';
+import { CreatePartUseCase } from '@application/use-cases/part/create-part.use-case';
+import { UpdatePartUseCase } from '@application/use-cases/part/update-part.use-case';
+import { DeletePartUseCase } from '@application/use-cases/part/delete-part.use-case';
+import { ListPartsUseCase } from '@application/use-cases/part/list-parts.use-case';
+import { AddStockUseCase } from '@application/use-cases/part/add-stock.use-case';
+import { GetPartUseCase } from '@application/use-cases/part/get-part.use-case';
+import { UserRole } from '@domain/enums/user-role.enum';
+import { Roles } from '@infrastructure/presentation/decorators/roles.decorator';
 
 @ApiTags('parts')
 @ApiBearerAuth()
 @Controller('api/parts')
 export class PartsController {
   constructor(
-    private readonly createPart: CreatePartUseCase,
-    private readonly getPart: GetPartUseCase,
-    private readonly listParts: ListPartsUseCase,
     private readonly listLowStock: ListLowStockPartsUseCase,
-    private readonly updatePart: UpdatePartUseCase,
-    private readonly addStock: AddStockUseCase,
     private readonly removeStock: RemoveStockUseCase,
+    private readonly createPart: CreatePartUseCase,
     private readonly deletePart: DeletePartUseCase,
+    private readonly updatePart: UpdatePartUseCase,
+    private readonly listParts: ListPartsUseCase,
+    private readonly addStock: AddStockUseCase,
+    private readonly getPart: GetPartUseCase,
   ) {}
 
   @Post()

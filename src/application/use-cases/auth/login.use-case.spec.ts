@@ -1,9 +1,10 @@
-import { UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import { Logger, UnauthorizedException } from '@nestjs/common';
+import { IUserRepository } from '../../../domain/repositories/user.repository.interface';
 import { LoginUseCase } from './login.use-case';
-import { IUserRepository } from '../../../domain/user/user.repository.interface';
-import { UserRole } from '../../../domain/user/user-role.enum';
+import { JwtService } from '@nestjs/jwt';
+import { UserRole } from '../../../domain/enums/user-role.enum';
+
+import * as bcrypt from 'bcrypt';
 
 const makeUserRepo = (): jest.Mocked<IUserRepository> => ({
   findById: jest.fn(),
@@ -13,6 +14,13 @@ const makeUserRepo = (): jest.Mocked<IUserRepository> => ({
   update: jest.fn(),
 });
 
+const makeLogger = (): jest.Mocked<Logger> =>
+  ({
+    log: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  }) as unknown as jest.Mocked<Logger>;
+
 describe('LoginUseCase', () => {
   let useCase: LoginUseCase;
   let userRepo: jest.Mocked<IUserRepository>;
@@ -21,7 +29,7 @@ describe('LoginUseCase', () => {
   beforeEach(() => {
     userRepo = makeUserRepo();
     jwtService = { sign: jest.fn().mockReturnValue('mock-token') };
-    useCase = new LoginUseCase(userRepo, jwtService as any);
+    useCase = new LoginUseCase(userRepo, jwtService as any, makeLogger());
   });
 
   const mockUser = {
