@@ -1,6 +1,6 @@
-import { PrismaServiceMapper } from '../mappers/prisma-service.mapper';
+import { PrismaServiceMapper } from '@infrastructure/database/prisma/mappers/prisma-service.mapper';
 import { IServiceRepository } from '@domain/repositories/service.repository.interface';
-import { PrismaService } from '../prisma.service';
+import { PrismaService } from '@infrastructure/database/prisma/prisma.service';
 import { ServiceEntity } from '@domain/entities/service/service.entity';
 import { Injectable } from '@nestjs/common';
 

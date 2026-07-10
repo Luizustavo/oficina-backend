@@ -1,7 +1,7 @@
-import { PrismaCustomerMapper } from '../mappers/prisma-customer.mapper';
+import { PrismaCustomerMapper } from '@infrastructure/database/prisma/mappers/prisma-customer.mapper';
 import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
 import { CustomerEntity } from '@domain/entities/customer/customer.entity';
-import { PrismaService } from '../prisma.service';
+import { PrismaService } from '@infrastructure/database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()

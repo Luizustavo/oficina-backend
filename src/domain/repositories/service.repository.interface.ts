@@ -1,4 +1,4 @@
-import { ServiceEntity } from '../entities/service/service.entity';
+import { ServiceEntity } from '@domain/entities/service/service.entity';
 
 export abstract class IServiceRepository {
   abstract findById(id: string): Promise<ServiceEntity | null>;

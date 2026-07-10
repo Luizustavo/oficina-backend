@@ -1,4 +1,4 @@
-import { InvalidStatusTransitionException } from '../../../shared/exceptions/domain.exceptions';
+import { InvalidStatusTransitionException } from '@shared/exceptions/domain.exceptions';
 
 export enum ServiceOrderStatus {
   RECEIVED = 'RECEIVED',

@@ -1,6 +1,6 @@
-import { PrismaVehicleMapper } from '../mappers/prisma-vehicle.mapper';
+import { PrismaVehicleMapper } from '@infrastructure/database/prisma/mappers/prisma-vehicle.mapper';
 import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
-import { PrismaService } from '../prisma.service';
+import { PrismaService } from '@infrastructure/database/prisma/prisma.service';
 import { VehicleEntity } from '@domain/entities/vehicle/vehicle.entity';
 import { Injectable } from '@nestjs/common';
 

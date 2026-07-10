@@ -1,4 +1,4 @@
-import { InvalidCnpjException } from '../../../shared/exceptions/domain.exceptions';
+import { InvalidCnpjException } from '@shared/exceptions/domain.exceptions';
 
 export class Cnpj {
   private readonly value: string;

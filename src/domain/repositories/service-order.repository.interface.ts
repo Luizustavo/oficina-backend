@@ -1,5 +1,5 @@
 import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
-import { ServiceOrderEntity } from '../entities/service-order/service-order.entity';
+import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
 
 export abstract class IServiceOrderRepository {
   abstract findAllCompleted(): Promise<ServiceOrderEntity[]>;

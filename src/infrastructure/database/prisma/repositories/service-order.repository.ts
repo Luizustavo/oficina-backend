@@ -1,8 +1,8 @@
-import { PrismaServiceOrderMapper } from '../mappers/prisma-service-order.mapper';
+import { PrismaServiceOrderMapper } from '@infrastructure/database/prisma/mappers/prisma-service-order.mapper';
 import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
 import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
 import { ServiceOrderStatus } from '@generated/prisma/enums';
-import { PrismaService } from '../prisma.service';
+import { PrismaService } from '@infrastructure/database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()

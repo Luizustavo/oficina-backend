@@ -1,4 +1,4 @@
-import { PartEntity } from '../entities/part/part.entity';
+import { PartEntity } from '@domain/entities/part/part.entity';
 
 export abstract class IPartRepository {
   abstract findLowStock(): Promise<PartEntity[]>;

@@ -1,4 +1,4 @@
-import { InvalidLicensePlateException } from '../../../shared/exceptions/domain.exceptions';
+import { InvalidLicensePlateException } from '@shared/exceptions/domain.exceptions';
 
 export class LicensePlate {
   private readonly value: string;

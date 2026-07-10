@@ -1,4 +1,4 @@
-import { CustomerEntity } from '../entities/customer/customer.entity';
+import { CustomerEntity } from '@domain/entities/customer/customer.entity';
 
 export abstract class ICustomerRepository {
   abstract hasServiceOrders(id: string): Promise<boolean>;

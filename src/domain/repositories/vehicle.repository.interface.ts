@@ -1,4 +1,4 @@
-import { VehicleEntity } from '../entities/vehicle/vehicle.entity';
+import { VehicleEntity } from '@domain/entities/vehicle/vehicle.entity';
 
 export abstract class IVehicleRepository {
   abstract findByLicensePlate(plate: string): Promise<VehicleEntity | null>;

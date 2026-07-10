@@ -1,6 +1,6 @@
-import { PrismaPartMapper } from '../mappers/prisma-part.mapper';
+import { PrismaPartMapper } from '@infrastructure/database/prisma/mappers/prisma-part.mapper';
 import { IPartRepository } from '@domain/repositories/part.repository.interface';
-import { PrismaService } from '../prisma.service';
+import { PrismaService } from '@infrastructure/database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 import { PartEntity } from '@domain/entities/part/part.entity';
 

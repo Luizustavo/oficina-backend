@@ -6,7 +6,7 @@ import { ListVehiclesUseCase } from '@application/use-cases/vehicle/list-vehicle
 import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
 import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
 import { CustomerRepository } from '@infrastructure/database/prisma/repositories/customer.repository';
-import { VehiclesController } from '../controllers/vehicles.controller';
+import { VehiclesController } from '@infrastructure/presentation/controllers/vehicles.controller';
 import { GetVehicleUseCase } from '@application/use-cases/vehicle/get-vehicle.use-case';
 import { VehicleRepository } from '@infrastructure/database/prisma/repositories/vehicle.repository';
 import { Logger, Module } from '@nestjs/common';

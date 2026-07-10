@@ -1,4 +1,4 @@
-import { InvalidCpfException } from '../../../shared/exceptions/domain.exceptions';
+import { InvalidCpfException } from '@shared/exceptions/domain.exceptions';
 
 export class Cpf {
   private readonly value: string;

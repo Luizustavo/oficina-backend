@@ -5,7 +5,7 @@ import { CreateServiceOrderUseCase } from '@application/use-cases/service-order/
 import { ListServiceOrdersUseCase } from '@application/use-cases/service-order/list-service-orders.use-case';
 import { TrackServiceOrderUseCase } from '@application/use-cases/service-order/track-service-order.use-case';
 import { AddServiceToOrderUseCase } from '@application/use-cases/service-order/add-service-to-order.use-case';
-import { ServiceOrdersController } from '../controllers/service-orders.controller';
+import { ServiceOrdersController } from '@infrastructure/presentation/controllers/service-orders.controller';
 import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
 import { RequestApprovalUseCase } from '@application/use-cases/service-order/request-approval.use-case';
 import { GetServiceOrderUseCase } from '@application/use-cases/service-order/get-service-order.use-case';

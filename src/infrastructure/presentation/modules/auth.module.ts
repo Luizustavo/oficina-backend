@@ -2,7 +2,7 @@ import { RefreshTokenUseCase } from '@application/use-cases/auth/refresh-token.u
 import { CreateUserUseCase } from '@application/use-cases/auth/create-user.use-case';
 import { IUserRepository } from '@domain/repositories/user.repository.interface';
 import { PassportModule } from '@nestjs/passport';
-import { AuthController } from '../controllers/auth.controller';
+import { AuthController } from '@infrastructure/presentation/controllers/auth.controller';
 import { UserRepository } from '@infrastructure/database/prisma/repositories/user.repository';
 import { Module, Logger } from '@nestjs/common';
 import { LoginUseCase } from '@application/use-cases/auth/login.use-case';
