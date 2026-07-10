@@ -1,17 +1,14 @@
-import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { RefreshResponseDto } from '@application/dtos/response/auth.dto';
+import { IUserRepository } from '@domain/repositories/user.repository.interface';
 import { JwtService } from '@nestjs/jwt';
+import { JwtPayload } from '@infrastructure/presentation/decorators/current-user.decorator';
+
 import type { StringValue } from 'ms';
-import { JwtPayload } from '../../../infrastructure/presentation/decorators/current-user.decorator';
-import {
-  IUserRepository,
-  USER_REPOSITORY,
-} from '../../../domain/repositories/user.repository.interface';
-import { RefreshResponseDto } from '../../dtos/response/auth.dto';
 
 @Injectable()
 export class RefreshTokenUseCase {
   constructor(
-    @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     private readonly jwtService: JwtService,
   ) {}

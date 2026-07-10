@@ -1,23 +1,27 @@
-import { Injectable, Inject } from '@nestjs/common';
 import {
-  ICustomerRepository,
-  CUSTOMER_REPOSITORY,
-} from '../../../domain/repositories/customer.repository.interface';
-import { CustomerEntity } from '../../../domain/entities/customer/customer.entity';
-import { NotFoundException } from '../../../shared/exceptions/domain.exceptions';
-import { CustomerResponseDto } from '../../dtos/response/customer.dto';
-import { PaginatedResponseDto } from '../../dtos/common.dto';
+  PaginatedResponseDto,
+  PaginatedRequestDto,
+} from '@application/dtos/common.dto';
+import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
+import { CustomerResponseDto } from '@application/dtos/response/customer.dto';
+import { Injectable, Logger } from '@nestjs/common';
+import { NotFoundException } from '@shared/exceptions/domain.exceptions';
+import { CustomerMapper } from '@application/mappers/customer.mapper';
 
 @Injectable()
 export class ListCustomersUseCase {
   constructor(
-    @Inject(CUSTOMER_REPOSITORY)
     private readonly customerRepository: ICustomerRepository,
+    private readonly logger: Logger,
   ) {}
 
   async execute(
-    dto: { page?: number; limit?: number } = {},
+    dto: PaginatedRequestDto,
   ): Promise<PaginatedResponseDto<CustomerResponseDto>> {
+    this.logger.log(
+      `Listing customers with pagination - Page: ${dto.page}, Limit: ${dto.limit}`,
+    );
+
     const page = dto.page ?? 1;
     const limit = dto.limit ?? 20;
     const skip = (page - 1) * limit;
@@ -27,26 +31,16 @@ export class ListCustomersUseCase {
       take: limit,
     });
 
+    this.logger.log(
+      `Retrieved ${data.length} customers from repository, Total customers: ${total}`,
+    );
+
     return {
-      data: data.map((c) => this.toResponse(c)),
+      data: data.map((c) => CustomerMapper.toResponse(c)),
       total,
       page,
       limit,
       totalPages: Math.ceil(total / limit),
-    };
-  }
-
-  private toResponse(customer: CustomerEntity): CustomerResponseDto {
-    return {
-      id: customer.id,
-      name: customer.name,
-      document: customer.document,
-      type: customer.type,
-      email: customer.email,
-      phone: customer.phone,
-      address: customer.address,
-      createdAt: customer.createdAt,
-      updatedAt: customer.updatedAt,
     };
   }
 }
@@ -54,52 +48,41 @@ export class ListCustomersUseCase {
 @Injectable()
 export class GetCustomerUseCase {
   constructor(
-    @Inject(CUSTOMER_REPOSITORY)
     private readonly customerRepository: ICustomerRepository,
+    private readonly logger: Logger,
   ) {}
 
   async execute(id: string): Promise<CustomerResponseDto> {
+    this.logger.log(`Retrieving customer with ID: ${id}`);
     const customer = await this.customerRepository.findById(id);
     if (!customer) {
       throw new NotFoundException('Customer', id);
     }
-    return {
-      id: customer.id,
-      name: customer.name,
-      document: customer.document,
-      type: customer.type,
-      email: customer.email,
-      phone: customer.phone,
-      address: customer.address,
-      createdAt: customer.createdAt,
-      updatedAt: customer.updatedAt,
-    };
+
+    const response: CustomerResponseDto = CustomerMapper.toResponse(customer);
+
+    this.logger.log(`Customer retrieved successfully with ID: ${id}`);
+
+    return response;
   }
 }
 
 @Injectable()
 export class GetCustomerByDocumentUseCase {
   constructor(
-    @Inject(CUSTOMER_REPOSITORY)
     private readonly customerRepository: ICustomerRepository,
+    private readonly logger: Logger,
   ) {}
 
   async execute(document: string): Promise<CustomerResponseDto> {
+    this.logger.log(`Retrieving customer by document: ${document}`);
     const cleaned = document.replace(/\D/g, '');
     const customer = await this.customerRepository.findByDocument(cleaned);
     if (!customer) {
       throw new NotFoundException('Customer', cleaned);
     }
-    return {
-      id: customer.id,
-      name: customer.name,
-      document: customer.document,
-      type: customer.type,
-      email: customer.email,
-      phone: customer.phone,
-      address: customer.address,
-      createdAt: customer.createdAt,
-      updatedAt: customer.updatedAt,
-    };
+    const response: CustomerResponseDto = CustomerMapper.toResponse(customer);
+    this.logger.log(`Customer retrieved successfully by document: ${document}`);
+    return response;
   }
 }

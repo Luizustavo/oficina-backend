@@ -1,55 +1,51 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { randomUUID } from 'crypto';
-import {
-  ICustomerRepository,
-  CUSTOMER_REPOSITORY,
-} from '../../../domain/repositories/customer.repository.interface';
-import { CustomerEntity } from '../../../domain/entities/customer/customer.entity';
-import { ConflictException } from '../../../shared/exceptions/domain.exceptions';
-import { CreateCustomerRequestDto } from '../../dtos/request/customer.dto';
-import { CustomerResponseDto } from '../../dtos/response/customer.dto';
+import { CreateCustomerRequestDto } from '@application/dtos/request/customer.dto';
+import { CustomerResponseDto } from '@application/dtos/response/customer.dto';
+import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
+import { ConflictException } from '@shared/exceptions/domain.exceptions';
+import { Injectable, Logger } from '@nestjs/common';
+import { CustomerMapper } from '@application/mappers/customer.mapper';
 
 export type { CustomerResponseDto };
 
 @Injectable()
 export class CreateCustomerUseCase {
   constructor(
-    @Inject(CUSTOMER_REPOSITORY)
     private readonly customerRepository: ICustomerRepository,
+    private readonly logger: Logger,
   ) {}
 
   async execute(dto: CreateCustomerRequestDto): Promise<CustomerResponseDto> {
-    const existing = await this.customerRepository.findByDocument(dto.document);
+    this.logger.log(`Creating customer with document: ${dto.document}`);
+    const entity = CustomerMapper.toEntity(dto);
+    const existing = await this.customerRepository.findByDocument(
+      entity.document,
+    );
+
     if (existing) {
+      this.logger.warn(
+        `Attempt to create customer with existing document: ${dto.document}`,
+      );
       throw new ConflictException(
         `Document "${dto.document}" is already registered`,
       );
     }
 
-    const customer = CustomerEntity.create({
-      name: dto.name,
-      document: dto.document.replace(/\D/g, ''),
-      type: dto.type,
-      email: dto.email,
-      phone: dto.phone,
-      address: dto.address,
-    }, randomUUID());
+    this.logger.log(
+      `No existing customer found with document: ${dto.document}, proceeding to create`,
+    );
 
-    const created = await this.customerRepository.create(customer);
-    return this.toResponse(created);
-  }
+    const created = await this.customerRepository.create(entity);
 
-  toResponse(customer: CustomerEntity): CustomerResponseDto {
-    return {
-      id: customer.id,
-      name: customer.name,
-      document: customer.document,
-      type: customer.type,
-      email: customer.email,
-      phone: customer.phone,
-      address: customer.address,
-      createdAt: customer.createdAt,
-      updatedAt: customer.updatedAt,
-    };
+    if (!created) {
+      this.logger.error(
+        `Failed to create customer with document: ${dto.document}`,
+      );
+      throw new Error('Failed to create customer');
+    }
+
+    this.logger.log(`Customer created successfully with ID: ${created.id}`);
+    const response: CustomerResponseDto = CustomerMapper.toResponse(created);
+    this.logger.log('Use case execution completed successfully');
+    return response;
   }
 }

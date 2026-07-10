@@ -1,11 +1,8 @@
-import {
-  IUserRepository,
-  USER_REPOSITORY,
-} from '@domain/repositories/user.repository.interface';
 import { CreateUserRequestDto } from '@application/dtos/request/auth.dto';
-import { Injectable, Inject } from '@nestjs/common';
 import { ConflictException } from '@nestjs/common';
+import { IUserRepository } from '@domain/repositories/user.repository.interface';
 import { UserResponseDto } from '@application/dtos/response/auth.dto';
+import { Injectable } from '@nestjs/common';
 import { UserEntity } from '@domain/entities/user/user.entity';
 import { UserMapper } from '@application/mappers/user.mapper';
 import { Logger } from '@nestjs/common';
@@ -13,7 +10,6 @@ import { Logger } from '@nestjs/common';
 @Injectable()
 export class CreateUserUseCase {
   constructor(
-    @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     private readonly logger: Logger,
   ) {}

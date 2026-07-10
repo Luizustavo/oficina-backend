@@ -1,9 +1,6 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import {
-  IServiceRepository,
-  SERVICE_REPOSITORY,
-} from '../../../domain/repositories/service.repository.interface';
+import { IServiceRepository } from '../../../domain/repositories/service.repository.interface';
 import { ServiceEntity } from '../../../domain/entities/service/service.entity';
 import { NotFoundException } from '../../../shared/exceptions/domain.exceptions';
 import {
@@ -28,10 +25,7 @@ function toResponse(service: ServiceEntity): ServiceResponseDto {
 
 @Injectable()
 export class CreateServiceUseCase {
-  constructor(
-    @Inject(SERVICE_REPOSITORY)
-    private readonly serviceRepository: IServiceRepository,
-  ) {}
+  constructor(private readonly serviceRepository: IServiceRepository) {}
 
   async execute(dto: CreateServiceRequestDto): Promise<ServiceResponseDto> {
     const service = ServiceEntity.create({ ...dto }, randomUUID());
@@ -42,10 +36,7 @@ export class CreateServiceUseCase {
 
 @Injectable()
 export class GetServiceUseCase {
-  constructor(
-    @Inject(SERVICE_REPOSITORY)
-    private readonly serviceRepository: IServiceRepository,
-  ) {}
+  constructor(private readonly serviceRepository: IServiceRepository) {}
 
   async execute(id: string): Promise<ServiceResponseDto> {
     const service = await this.serviceRepository.findById(id);
@@ -56,10 +47,7 @@ export class GetServiceUseCase {
 
 @Injectable()
 export class ListServicesUseCase {
-  constructor(
-    @Inject(SERVICE_REPOSITORY)
-    private readonly serviceRepository: IServiceRepository,
-  ) {}
+  constructor(private readonly serviceRepository: IServiceRepository) {}
 
   async execute(params: {
     page?: number;
@@ -85,10 +73,7 @@ export class ListServicesUseCase {
 
 @Injectable()
 export class UpdateServiceUseCase {
-  constructor(
-    @Inject(SERVICE_REPOSITORY)
-    private readonly serviceRepository: IServiceRepository,
-  ) {}
+  constructor(private readonly serviceRepository: IServiceRepository) {}
 
   async execute(
     id: string,
@@ -104,10 +89,7 @@ export class UpdateServiceUseCase {
 
 @Injectable()
 export class ToggleServiceUseCase {
-  constructor(
-    @Inject(SERVICE_REPOSITORY)
-    private readonly serviceRepository: IServiceRepository,
-  ) {}
+  constructor(private readonly serviceRepository: IServiceRepository) {}
 
   async execute(id: string): Promise<ServiceResponseDto> {
     const service = await this.serviceRepository.findById(id);
@@ -120,10 +102,7 @@ export class ToggleServiceUseCase {
 
 @Injectable()
 export class DeleteServiceUseCase {
-  constructor(
-    @Inject(SERVICE_REPOSITORY)
-    private readonly serviceRepository: IServiceRepository,
-  ) {}
+  constructor(private readonly serviceRepository: IServiceRepository) {}
 
   async execute(id: string): Promise<void> {
     const service = await this.serviceRepository.findById(id);

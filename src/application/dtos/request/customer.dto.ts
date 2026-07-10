@@ -41,6 +41,10 @@ export class CreateCustomerRequestDto {
 }
 
 export class UpdateCustomerRequestDto {
+  @ApiProperty({ example: '1254524', required: true })
+  @IsString()
+  id!: string;
+
   @ApiProperty({ example: 'Carlos A. Pereira', required: false })
   @IsString()
   @IsOptional()

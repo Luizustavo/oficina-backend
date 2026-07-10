@@ -1,11 +1,9 @@
 import { UserEntity } from '../entities/user/user.entity';
 
-export interface IUserRepository {
-  create(user: UserEntity): Promise<UserEntity>;
-  findById(id: string): Promise<UserEntity | null>;
-  findByEmail(email: string): Promise<UserEntity | null>;
-  findAll(): Promise<UserEntity[]>;
-  update(user: UserEntity): Promise<UserEntity>;
+export abstract class IUserRepository {
+  abstract findByEmail(email: string): Promise<UserEntity | null>;
+  abstract findById(id: string): Promise<UserEntity | null>;
+  abstract findAll(): Promise<UserEntity[]>;
+  abstract create(user: UserEntity): Promise<UserEntity>;
+  abstract update(user: UserEntity): Promise<UserEntity>;
 }
-
-export const USER_REPOSITORY = Symbol('IUserRepository');

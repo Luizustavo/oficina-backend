@@ -1,9 +1,6 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import {
-  IPartRepository,
-  PART_REPOSITORY,
-} from '../../../domain/repositories/part.repository.interface';
+import { IPartRepository } from '../../../domain/repositories/part.repository.interface';
 import { PartEntity } from '../../../domain/entities/part/part.entity';
 import {
   ConflictException,
@@ -34,9 +31,7 @@ function toResponse(part: PartEntity): PartResponseDto {
 
 @Injectable()
 export class CreatePartUseCase {
-  constructor(
-    @Inject(PART_REPOSITORY) private readonly partRepository: IPartRepository,
-  ) {}
+  constructor(private readonly partRepository: IPartRepository) {}
 
   async execute(dto: CreatePartRequestDto): Promise<PartResponseDto> {
     const existing = await this.partRepository.findByCode(dto.code);
@@ -52,9 +47,7 @@ export class CreatePartUseCase {
 
 @Injectable()
 export class GetPartUseCase {
-  constructor(
-    @Inject(PART_REPOSITORY) private readonly partRepository: IPartRepository,
-  ) {}
+  constructor(private readonly partRepository: IPartRepository) {}
 
   async execute(id: string): Promise<PartResponseDto> {
     const part = await this.partRepository.findById(id);
@@ -65,9 +58,7 @@ export class GetPartUseCase {
 
 @Injectable()
 export class ListPartsUseCase {
-  constructor(
-    @Inject(PART_REPOSITORY) private readonly partRepository: IPartRepository,
-  ) {}
+  constructor(private readonly partRepository: IPartRepository) {}
 
   async execute(params: {
     page?: number;
@@ -93,9 +84,7 @@ export class ListPartsUseCase {
 
 @Injectable()
 export class ListLowStockPartsUseCase {
-  constructor(
-    @Inject(PART_REPOSITORY) private readonly partRepository: IPartRepository,
-  ) {}
+  constructor(private readonly partRepository: IPartRepository) {}
 
   async execute(): Promise<PartResponseDto[]> {
     const parts = await this.partRepository.findLowStock();
@@ -105,9 +94,7 @@ export class ListLowStockPartsUseCase {
 
 @Injectable()
 export class UpdatePartUseCase {
-  constructor(
-    @Inject(PART_REPOSITORY) private readonly partRepository: IPartRepository,
-  ) {}
+  constructor(private readonly partRepository: IPartRepository) {}
 
   async execute(
     id: string,
@@ -123,9 +110,7 @@ export class UpdatePartUseCase {
 
 @Injectable()
 export class AddStockUseCase {
-  constructor(
-    @Inject(PART_REPOSITORY) private readonly partRepository: IPartRepository,
-  ) {}
+  constructor(private readonly partRepository: IPartRepository) {}
 
   async execute(id: string, quantity: number): Promise<PartResponseDto> {
     const part = await this.partRepository.findById(id);
@@ -138,9 +123,7 @@ export class AddStockUseCase {
 
 @Injectable()
 export class RemoveStockUseCase {
-  constructor(
-    @Inject(PART_REPOSITORY) private readonly partRepository: IPartRepository,
-  ) {}
+  constructor(private readonly partRepository: IPartRepository) {}
 
   async execute(id: string, quantity: number): Promise<PartResponseDto> {
     const part = await this.partRepository.findById(id);
@@ -153,9 +136,7 @@ export class RemoveStockUseCase {
 
 @Injectable()
 export class DeletePartUseCase {
-  constructor(
-    @Inject(PART_REPOSITORY) private readonly partRepository: IPartRepository,
-  ) {}
+  constructor(private readonly partRepository: IPartRepository) {}
 
   async execute(id: string): Promise<void> {
     const part = await this.partRepository.findById(id);

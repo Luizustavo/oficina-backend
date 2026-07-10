@@ -1,20 +1,17 @@
-import { Injectable, Inject } from '@nestjs/common';
 import {
-  ICustomerRepository,
-  CUSTOMER_REPOSITORY,
-} from '../../../domain/repositories/customer.repository.interface';
-import {
-  NotFoundException,
   BusinessRuleException,
-} from '../../../shared/exceptions/domain.exceptions';
-import { UpdateCustomerRequestDto } from '../../dtos/request/customer.dto';
-import { CustomerResponseDto } from '../../dtos/response/customer.dto';
+  NotFoundException,
+} from '@shared/exceptions/domain.exceptions';
+import { UpdateCustomerRequestDto } from '@application/dtos/request/customer.dto';
+import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
+import { CustomerResponseDto } from '@application/dtos/response/customer.dto';
+import { Injectable, Logger } from '@nestjs/common';
 
 @Injectable()
 export class UpdateCustomerUseCase {
   constructor(
-    @Inject(CUSTOMER_REPOSITORY)
     private readonly customerRepository: ICustomerRepository,
+    private readonly logger: Logger,
   ) {}
 
   async execute(
@@ -45,10 +42,7 @@ export class UpdateCustomerUseCase {
 
 @Injectable()
 export class DeleteCustomerUseCase {
-  constructor(
-    @Inject(CUSTOMER_REPOSITORY)
-    private readonly customerRepository: ICustomerRepository,
-  ) {}
+  constructor(private readonly customerRepository: ICustomerRepository) {}
 
   async execute(id: string): Promise<void> {
     const exists = await this.customerRepository.existsById(id);

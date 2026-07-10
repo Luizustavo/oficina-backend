@@ -1,9 +1,6 @@
-import {
-  IUserRepository,
-  USER_REPOSITORY,
-} from '@domain/repositories/user.repository.interface';
-import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { LoginResponseDto } from '@application/dtos/response/auth.dto';
+import { IUserRepository } from '@domain/repositories/user.repository.interface';
 import { LoginRequestDto } from '@application/dtos/request/auth.dto';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from '@infrastructure/presentation/decorators/current-user.decorator';
@@ -14,17 +11,20 @@ import type { StringValue } from 'ms';
 @Injectable()
 export class LoginUseCase {
   constructor(
-    @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     private readonly jwtService: JwtService,
+    private readonly logger: Logger,
   ) {}
 
   async execute(dto: LoginRequestDto): Promise<LoginResponseDto> {
+    this.logger.log(`Attempting login for email: ${dto.email}`);
+
     const user = await this.userRepository.findByEmail(dto.email);
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    this.logger.log(`Verifying password for user: ${user.id}`);
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');

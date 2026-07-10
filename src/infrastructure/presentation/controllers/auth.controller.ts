@@ -1,7 +1,4 @@
-import {
-  IUserRepository,
-  USER_REPOSITORY,
-} from '@domain/repositories/user.repository.interface';
+import { IUserRepository } from '@domain/repositories/user.repository.interface';
 import {
   RefreshTokenRequestDto,
   CreateUserRequestDto,
@@ -16,7 +13,6 @@ import { LoginUseCase } from '@application/use-cases/auth/login.use-case';
 import { UserRole } from '@domain/enums/user-role.enum';
 import { Public } from '../decorators/public.decorator';
 import { Roles } from '../decorators/roles.decorator';
-import { Inject } from '@nestjs/common';
 
 @ApiTags('auth')
 @Controller('api/auth')
@@ -25,7 +21,7 @@ export class AuthController {
     private readonly refreshTokenUseCase: RefreshTokenUseCase,
     private readonly createUserUseCase: CreateUserUseCase,
     private readonly loginUseCase: LoginUseCase,
-    @Inject(USER_REPOSITORY) private readonly userRepository: IUserRepository,
+    private readonly userRepository: IUserRepository,
   ) {}
 
   @Post('login')

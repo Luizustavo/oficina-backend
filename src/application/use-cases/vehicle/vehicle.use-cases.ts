@@ -1,12 +1,6 @@
-import { Injectable, Inject } from '@nestjs/common';
-import {
-  IVehicleRepository,
-  VEHICLE_REPOSITORY,
-} from '../../../domain/repositories/vehicle.repository.interface';
-import {
-  ICustomerRepository,
-  CUSTOMER_REPOSITORY,
-} from '../../../domain/repositories/customer.repository.interface';
+import { Injectable } from '@nestjs/common';
+import { IVehicleRepository } from '../../../domain/repositories/vehicle.repository.interface';
+import { ICustomerRepository } from '../../../domain/repositories/customer.repository.interface';
 import { VehicleEntity } from '../../../domain/entities/vehicle/vehicle.entity';
 import {
   ConflictException,
@@ -22,9 +16,8 @@ import { PaginatedResponseDto } from '../../dtos/common.dto';
 @Injectable()
 export class CreateVehicleUseCase {
   constructor(
-    @Inject(VEHICLE_REPOSITORY)
     private readonly vehicleRepository: IVehicleRepository,
-    @Inject(CUSTOMER_REPOSITORY)
+
     private readonly customerRepository: ICustomerRepository,
   ) {}
 
@@ -75,10 +68,7 @@ export class CreateVehicleUseCase {
 
 @Injectable()
 export class GetVehicleUseCase {
-  constructor(
-    @Inject(VEHICLE_REPOSITORY)
-    private readonly vehicleRepository: IVehicleRepository,
-  ) {}
+  constructor(private readonly vehicleRepository: IVehicleRepository) {}
 
   async execute(id: string): Promise<VehicleResponseDto> {
     const vehicle = await this.vehicleRepository.findById(id);
@@ -99,10 +89,7 @@ export class GetVehicleUseCase {
 
 @Injectable()
 export class ListVehiclesUseCase {
-  constructor(
-    @Inject(VEHICLE_REPOSITORY)
-    private readonly vehicleRepository: IVehicleRepository,
-  ) {}
+  constructor(private readonly vehicleRepository: IVehicleRepository) {}
 
   async execute(params: {
     page?: number;
@@ -137,10 +124,7 @@ export class ListVehiclesUseCase {
 
 @Injectable()
 export class ListVehiclesByCustomerUseCase {
-  constructor(
-    @Inject(VEHICLE_REPOSITORY)
-    private readonly vehicleRepository: IVehicleRepository,
-  ) {}
+  constructor(private readonly vehicleRepository: IVehicleRepository) {}
 
   async execute(customerId: string): Promise<VehicleResponseDto[]> {
     const vehicles = await this.vehicleRepository.findByCustomerId(customerId);
@@ -160,10 +144,7 @@ export class ListVehiclesByCustomerUseCase {
 
 @Injectable()
 export class UpdateVehicleUseCase {
-  constructor(
-    @Inject(VEHICLE_REPOSITORY)
-    private readonly vehicleRepository: IVehicleRepository,
-  ) {}
+  constructor(private readonly vehicleRepository: IVehicleRepository) {}
 
   async execute(
     id: string,
@@ -189,10 +170,7 @@ export class UpdateVehicleUseCase {
 
 @Injectable()
 export class DeleteVehicleUseCase {
-  constructor(
-    @Inject(VEHICLE_REPOSITORY)
-    private readonly vehicleRepository: IVehicleRepository,
-  ) {}
+  constructor(private readonly vehicleRepository: IVehicleRepository) {}
 
   async execute(id: string): Promise<void> {
     const vehicle = await this.vehicleRepository.findById(id);

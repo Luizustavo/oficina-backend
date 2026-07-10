@@ -1,24 +1,9 @@
-import { Injectable, Inject } from '@nestjs/common';
-import {
-  IServiceOrderRepository,
-  SERVICE_ORDER_REPOSITORY,
-} from '../../../domain/repositories/service-order.repository.interface';
-import {
-  ICustomerRepository,
-  CUSTOMER_REPOSITORY,
-} from '../../../domain/repositories/customer.repository.interface';
-import {
-  IVehicleRepository,
-  VEHICLE_REPOSITORY,
-} from '../../../domain/repositories/vehicle.repository.interface';
-import {
-  IServiceRepository,
-  SERVICE_REPOSITORY,
-} from '../../../domain/repositories/service.repository.interface';
-import {
-  IPartRepository,
-  PART_REPOSITORY,
-} from '../../../domain/repositories/part.repository.interface';
+import { Injectable } from '@nestjs/common';
+import { IServiceOrderRepository } from '../../../domain/repositories/service-order.repository.interface';
+import { ICustomerRepository } from '../../../domain/repositories/customer.repository.interface';
+import { IVehicleRepository } from '../../../domain/repositories/vehicle.repository.interface';
+import { IServiceRepository } from '../../../domain/repositories/service.repository.interface';
+import { IPartRepository } from '../../../domain/repositories/part.repository.interface';
 import { ServiceOrderEntity } from '../../../domain/entities/service-order/service-order.entity';
 import { ServiceOrderStatus } from '../../../domain/validators/value-objects/service-order-status.value-object';
 import {
@@ -72,11 +57,10 @@ function generateOrderNumber(): string {
 @Injectable()
 export class CreateServiceOrderUseCase {
   constructor(
-    @Inject(SERVICE_ORDER_REPOSITORY)
     private readonly orderRepository: IServiceOrderRepository,
-    @Inject(CUSTOMER_REPOSITORY)
+
     private readonly customerRepository: ICustomerRepository,
-    @Inject(VEHICLE_REPOSITORY)
+
     private readonly vehicleRepository: IVehicleRepository,
   ) {}
 
@@ -112,10 +96,7 @@ export class CreateServiceOrderUseCase {
 
 @Injectable()
 export class GetServiceOrderUseCase {
-  constructor(
-    @Inject(SERVICE_ORDER_REPOSITORY)
-    private readonly orderRepository: IServiceOrderRepository,
-  ) {}
+  constructor(private readonly orderRepository: IServiceOrderRepository) {}
 
   async execute(id: string): Promise<ServiceOrderResponseDto> {
     const order = await this.orderRepository.findById(id);
@@ -126,10 +107,7 @@ export class GetServiceOrderUseCase {
 
 @Injectable()
 export class ListServiceOrdersUseCase {
-  constructor(
-    @Inject(SERVICE_ORDER_REPOSITORY)
-    private readonly orderRepository: IServiceOrderRepository,
-  ) {}
+  constructor(private readonly orderRepository: IServiceOrderRepository) {}
 
   async execute(params: {
     page?: number;
@@ -155,10 +133,7 @@ export class ListServiceOrdersUseCase {
 
 @Injectable()
 export class ListServiceOrdersByCustomerUseCase {
-  constructor(
-    @Inject(SERVICE_ORDER_REPOSITORY)
-    private readonly orderRepository: IServiceOrderRepository,
-  ) {}
+  constructor(private readonly orderRepository: IServiceOrderRepository) {}
 
   async execute(customerId: string): Promise<ServiceOrderResponseDto[]> {
     const orders = await this.orderRepository.findByCustomerId(customerId);
@@ -168,10 +143,7 @@ export class ListServiceOrdersByCustomerUseCase {
 
 @Injectable()
 export class ListServiceOrdersByStatusUseCase {
-  constructor(
-    @Inject(SERVICE_ORDER_REPOSITORY)
-    private readonly orderRepository: IServiceOrderRepository,
-  ) {}
+  constructor(private readonly orderRepository: IServiceOrderRepository) {}
 
   async execute(
     status: ServiceOrderStatus,
@@ -184,9 +156,8 @@ export class ListServiceOrdersByStatusUseCase {
 @Injectable()
 export class AddServiceToOrderUseCase {
   constructor(
-    @Inject(SERVICE_ORDER_REPOSITORY)
     private readonly orderRepository: IServiceOrderRepository,
-    @Inject(SERVICE_REPOSITORY)
+
     private readonly serviceRepository: IServiceRepository,
   ) {}
 
@@ -220,9 +191,8 @@ export class AddServiceToOrderUseCase {
 @Injectable()
 export class AddPartToOrderUseCase {
   constructor(
-    @Inject(SERVICE_ORDER_REPOSITORY)
     private readonly orderRepository: IServiceOrderRepository,
-    @Inject(PART_REPOSITORY) private readonly partRepository: IPartRepository,
+    private readonly partRepository: IPartRepository,
   ) {}
 
   async execute(
@@ -263,10 +233,7 @@ export class AddPartToOrderUseCase {
 
 @Injectable()
 export class StartDiagnosisUseCase {
-  constructor(
-    @Inject(SERVICE_ORDER_REPOSITORY)
-    private readonly orderRepository: IServiceOrderRepository,
-  ) {}
+  constructor(private readonly orderRepository: IServiceOrderRepository) {}
 
   async execute(id: string): Promise<ServiceOrderResponseDto> {
     const order = await this.orderRepository.findById(id);
@@ -279,10 +246,7 @@ export class StartDiagnosisUseCase {
 
 @Injectable()
 export class RequestApprovalUseCase {
-  constructor(
-    @Inject(SERVICE_ORDER_REPOSITORY)
-    private readonly orderRepository: IServiceOrderRepository,
-  ) {}
+  constructor(private readonly orderRepository: IServiceOrderRepository) {}
 
   async execute(id: string): Promise<ServiceOrderResponseDto> {
     const order = await this.orderRepository.findById(id);
@@ -295,10 +259,7 @@ export class RequestApprovalUseCase {
 
 @Injectable()
 export class ApproveOrderUseCase {
-  constructor(
-    @Inject(SERVICE_ORDER_REPOSITORY)
-    private readonly orderRepository: IServiceOrderRepository,
-  ) {}
+  constructor(private readonly orderRepository: IServiceOrderRepository) {}
 
   async execute(id: string): Promise<ServiceOrderResponseDto> {
     const order = await this.orderRepository.findById(id);
@@ -311,10 +272,7 @@ export class ApproveOrderUseCase {
 
 @Injectable()
 export class CompleteOrderUseCase {
-  constructor(
-    @Inject(SERVICE_ORDER_REPOSITORY)
-    private readonly orderRepository: IServiceOrderRepository,
-  ) {}
+  constructor(private readonly orderRepository: IServiceOrderRepository) {}
 
   async execute(id: string): Promise<ServiceOrderResponseDto> {
     const order = await this.orderRepository.findById(id);
@@ -327,10 +285,7 @@ export class CompleteOrderUseCase {
 
 @Injectable()
 export class DeliverOrderUseCase {
-  constructor(
-    @Inject(SERVICE_ORDER_REPOSITORY)
-    private readonly orderRepository: IServiceOrderRepository,
-  ) {}
+  constructor(private readonly orderRepository: IServiceOrderRepository) {}
 
   async execute(id: string): Promise<ServiceOrderResponseDto> {
     const order = await this.orderRepository.findById(id);
@@ -343,10 +298,7 @@ export class DeliverOrderUseCase {
 
 @Injectable()
 export class CancelOrderUseCase {
-  constructor(
-    @Inject(SERVICE_ORDER_REPOSITORY)
-    private readonly orderRepository: IServiceOrderRepository,
-  ) {}
+  constructor(private readonly orderRepository: IServiceOrderRepository) {}
 
   async execute(id: string): Promise<ServiceOrderResponseDto> {
     const order = await this.orderRepository.findById(id);
@@ -359,10 +311,7 @@ export class CancelOrderUseCase {
 
 @Injectable()
 export class TrackServiceOrderUseCase {
-  constructor(
-    @Inject(SERVICE_ORDER_REPOSITORY)
-    private readonly orderRepository: IServiceOrderRepository,
-  ) {}
+  constructor(private readonly orderRepository: IServiceOrderRepository) {}
 
   async execute(orderNumber: string): Promise<TrackServiceOrderResponseDto> {
     const order = await this.orderRepository.findByOrderNumber(orderNumber);
@@ -384,10 +333,7 @@ export class TrackServiceOrderUseCase {
 
 @Injectable()
 export class GetAverageExecutionTimeUseCase {
-  constructor(
-    @Inject(SERVICE_ORDER_REPOSITORY)
-    private readonly orderRepository: IServiceOrderRepository,
-  ) {}
+  constructor(private readonly orderRepository: IServiceOrderRepository) {}
 
   async execute(): Promise<AverageExecutionTimeResponseDto> {
     const orders = await this.orderRepository.findAllCompleted();

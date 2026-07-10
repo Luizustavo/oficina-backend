@@ -7,7 +7,7 @@ import {
   GetServiceUseCase,
 } from '@application/use-cases/service/service.use-cases';
 import { ServicesController } from '../controllers/services.controller';
-import { SERVICE_REPOSITORY } from '@domain/repositories/service.repository.interface';
+import { IServiceRepository } from '@domain/repositories/service.repository.interface';
 import { ServiceRepository } from '@infrastructure/database/prisma/repositories/service.repository';
 import { Module } from '@nestjs/common';
 
@@ -20,8 +20,8 @@ import { Module } from '@nestjs/common';
     DeleteServiceUseCase,
     ListServicesUseCase,
     GetServiceUseCase,
-    { provide: SERVICE_REPOSITORY, useClass: ServiceRepository },
+    { provide: IServiceRepository, useClass: ServiceRepository },
   ],
-  exports: [{ provide: SERVICE_REPOSITORY, useClass: ServiceRepository }],
+  exports: [{ provide: IServiceRepository, useClass: ServiceRepository }],
 })
 export class ServicesModule {}
