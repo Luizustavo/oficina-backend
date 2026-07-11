@@ -1,28 +1,26 @@
 import {
   Controller,
-  Get,
-  Post,
-  Patch,
   Delete,
-  Body,
   Param,
   Query,
+  Patch,
+  Post,
+  Body,
+  Get,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { Roles } from '../decorators/roles.decorator';
-import { UserRole } from '../../../domain/user/user-role.enum';
-import {
-  CreateServiceUseCase,
-  GetServiceUseCase,
-  ListServicesUseCase,
-  UpdateServiceUseCase,
-  ToggleServiceUseCase,
-  DeleteServiceUseCase,
-} from '../../../application/use-cases/service/service.use-cases';
 import {
   CreateServiceRequestDto,
   UpdateServiceRequestDto,
-} from '../../../application/dtos/request/service.dto';
+} from '@application/dtos/request/service.dto';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { CreateServiceUseCase } from '@application/use-cases/service/create-service.use-case';
+import { UpdateServiceUseCase } from '@application/use-cases/service/update-service.use-case';
+import { ToggleServiceUseCase } from '@application/use-cases/service/toggle-service.use-case';
+import { DeleteServiceUseCase } from '@application/use-cases/service/delete-service.use-case';
+import { ListServicesUseCase } from '@application/use-cases/service/list-services.use-case';
+import { GetServiceUseCase } from '@application/use-cases/service/get-service.use-case';
+import { UserRole } from '@domain/enums/user-role.enum';
+import { Roles } from '@infrastructure/presentation/decorators/roles.decorator';
 
 @ApiTags('services')
 @ApiBearerAuth()
@@ -30,11 +28,11 @@ import {
 export class ServicesController {
   constructor(
     private readonly createService: CreateServiceUseCase,
-    private readonly getService: GetServiceUseCase,
-    private readonly listServices: ListServicesUseCase,
     private readonly updateService: UpdateServiceUseCase,
     private readonly toggleService: ToggleServiceUseCase,
     private readonly deleteService: DeleteServiceUseCase,
+    private readonly listServices: ListServicesUseCase,
+    private readonly getService: GetServiceUseCase,
   ) {}
 
   @Post()

@@ -1,7 +1,9 @@
 name: Deploy to Production
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [main]
 
 permissions:
@@ -11,12 +13,18 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
+    # Only deploy if the CI run that just completed for this branch passed.
+    if: github.event.workflow_run.conclusion == 'success'
     # Add required reviewers to the "production" Environment in
     # Settings > Environments so this job pauses for manual approval
     # before it runs.
     environment: production
     steps:
       - uses: actions/checkout@v4
+        with:
+          # workflow_run always checks out the default branch by default;
+          # pin to the exact commit CI validated instead.
+          ref: ${{ github.event.workflow_run.head_sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '20'

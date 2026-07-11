@@ -1,30 +1,29 @@
-import { Module } from '@nestjs/common';
-import { VehiclesController } from '../controllers/vehicles.controller';
-import {
-  CreateVehicleUseCase,
-  GetVehicleUseCase,
-  ListVehiclesUseCase,
-  ListVehiclesByCustomerUseCase,
-  UpdateVehicleUseCase,
-  DeleteVehicleUseCase,
-} from '../../../application/use-cases/vehicle/vehicle.use-cases';
-import { VehicleRepository } from '../../database/repositories/vehicle.repository';
-import { CustomerRepository } from '../../database/repositories/customer.repository';
-import { VEHICLE_REPOSITORY } from '../../../domain/vehicle/vehicle.repository.interface';
-import { CUSTOMER_REPOSITORY } from '../../../domain/customer/customer.repository.interface';
+import { ListVehiclesByCustomerUseCase } from '@application/use-cases/vehicle/list-vehicles-by-customer.use-case';
+import { CreateVehicleUseCase } from '@application/use-cases/vehicle/create-vehicle.use-case';
+import { UpdateVehicleUseCase } from '@application/use-cases/vehicle/update-vehicle.use-case';
+import { DeleteVehicleUseCase } from '@application/use-cases/vehicle/delete-vehicle.use-case';
+import { ListVehiclesUseCase } from '@application/use-cases/vehicle/list-vehicles.use-case';
+import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
+import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
+import { CustomerRepository } from '@infrastructure/database/prisma/repositories/customer.repository';
+import { VehiclesController } from '@infrastructure/presentation/controllers/vehicles.controller';
+import { GetVehicleUseCase } from '@application/use-cases/vehicle/get-vehicle.use-case';
+import { VehicleRepository } from '@infrastructure/database/prisma/repositories/vehicle.repository';
+import { Logger, Module } from '@nestjs/common';
 
 @Module({
   controllers: [VehiclesController],
   providers: [
-    CreateVehicleUseCase,
-    GetVehicleUseCase,
-    ListVehiclesUseCase,
+    Logger,
     ListVehiclesByCustomerUseCase,
     UpdateVehicleUseCase,
     DeleteVehicleUseCase,
-    { provide: VEHICLE_REPOSITORY, useClass: VehicleRepository },
-    { provide: CUSTOMER_REPOSITORY, useClass: CustomerRepository },
+    CreateVehicleUseCase,
+    ListVehiclesUseCase,
+    GetVehicleUseCase,
+    { provide: ICustomerRepository, useClass: CustomerRepository },
+    { provide: IVehicleRepository, useClass: VehicleRepository },
   ],
-  exports: [{ provide: VEHICLE_REPOSITORY, useClass: VehicleRepository }],
+  exports: [{ provide: IVehicleRepository, useClass: VehicleRepository }],
 })
 export class VehiclesModule {}

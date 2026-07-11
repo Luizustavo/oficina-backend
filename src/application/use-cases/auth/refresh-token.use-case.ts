@@ -1,48 +1,53 @@
-import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { RefreshResponseDto } from '@application/dtos/response/auth.dto';
+import { IUserRepository } from '@domain/repositories/user.repository.interface';
 import { JwtService } from '@nestjs/jwt';
+import { JwtPayload } from '@infrastructure/presentation/decorators/current-user.decorator';
+import { UserMapper } from '@application/mappers/user.mapper';
+import { jwtConfig } from '@infrastructure/config/jwt.config';
+
 import type { StringValue } from 'ms';
-import { JwtPayload } from '../../../infrastructure/presentation/decorators/current-user.decorator';
-import {
-  IUserRepository,
-  USER_REPOSITORY,
-} from '../../../domain/user/user.repository.interface';
-import { RefreshResponseDto } from '../../dtos/response/auth.dto';
 
 @Injectable()
 export class RefreshTokenUseCase {
   constructor(
-    @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     private readonly jwtService: JwtService,
+    private readonly logger: Logger,
   ) {}
 
   async execute(refreshToken: string): Promise<RefreshResponseDto> {
+    this.logger.log('Attempting to refresh access token');
+    const { jwt } = jwtConfig();
+
     let payload: JwtPayload;
     try {
       payload = this.jwtService.verify<JwtPayload>(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret',
+        secret: jwt.refreshSecret,
       });
     } catch {
+      this.logger.warn('Refresh token verification failed');
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
     const user = await this.userRepository.findById(payload.sub);
     if (!user || !user.isActive) {
+      this.logger.warn(
+        `Refresh token rejected - user not found or inactive: ${payload.sub}`,
+      );
       throw new UnauthorizedException('User not found or inactive');
     }
 
-    const newPayload: JwtPayload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name,
-    };
+    const newPayload = UserMapper.toJwtPayload(user);
 
     const accessToken = this.jwtService.sign(newPayload, {
-      secret: process.env.JWT_SECRET || 'dev-jwt-secret',
-      expiresIn: (process.env.JWT_EXPIRES_IN ?? '15m') as StringValue,
+      secret: jwt.secret,
+      expiresIn: jwt.expiresIn as StringValue,
     });
 
-    return { accessToken };
+    this.logger.log(`Access token refreshed successfully for user: ${user.id}`);
+
+    const response: RefreshResponseDto = { accessToken };
+    return response;
   }
 }

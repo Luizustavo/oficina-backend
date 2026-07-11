@@ -1,7 +1,7 @@
+import { IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsLicensePlate } from '@domain/validators/is-license-plate.validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
-import { IsLicensePlate } from '../validators/is-license-plate.validator';
 
 export class CreateVehicleRequestDto {
   @ApiProperty({ example: 'uuid-do-cliente' })

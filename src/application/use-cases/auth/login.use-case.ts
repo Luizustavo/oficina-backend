@@ -1,62 +1,60 @@
-import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { LoginResponseDto } from '@application/dtos/response/auth.dto';
+import { IUserRepository } from '@domain/repositories/user.repository.interface';
+import { LoginRequestDto } from '@application/dtos/request/auth.dto';
+import { UserMapper } from '@application/mappers/user.mapper';
 import { JwtService } from '@nestjs/jwt';
-import type { StringValue } from 'ms';
-import * as bcrypt from 'bcrypt';
-import {
-  IUserRepository,
-  USER_REPOSITORY,
-} from '../../../domain/user/user.repository.interface';
-import { JwtPayload } from '../../../infrastructure/presentation/decorators/current-user.decorator';
-import { LoginRequestDto } from '../../dtos/request/auth.dto';
-import { LoginResponseDto } from '../../dtos/response/auth.dto';
+import { jwtConfig } from '@infrastructure/config/jwt.config';
 
-export type { LoginResponseDto };
+import * as bcrypt from 'bcrypt';
+import type { StringValue } from 'ms';
 
 @Injectable()
 export class LoginUseCase {
   constructor(
-    @Inject(USER_REPOSITORY)
     private readonly userRepository: IUserRepository,
     private readonly jwtService: JwtService,
+    private readonly logger: Logger,
   ) {}
 
   async execute(dto: LoginRequestDto): Promise<LoginResponseDto> {
+    const { jwt } = jwtConfig();
+    this.logger.log(`Attempting login for email: ${dto.email}`);
+
     const user = await this.userRepository.findByEmail(dto.email);
     if (!user || !user.isActive) {
+      this.logger.warn(
+        `Login failed - user not found or inactive: ${dto.email}`,
+      );
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    this.logger.log(`Verifying password for user: ${user.id}`);
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
     if (!isPasswordValid) {
+      this.logger.warn(`Login failed - invalid password for user: ${user.id}`);
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload: JwtPayload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-      name: user.name,
-    };
+    const payload = UserMapper.toJwtPayload(user);
 
     const accessToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_SECRET || 'dev-jwt-secret',
-      expiresIn: (process.env.JWT_EXPIRES_IN ?? '15m') as StringValue,
+      secret: jwt.secret,
+      expiresIn: jwt.expiresIn as StringValue,
     });
 
     const refreshToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret',
-      expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN ?? '7d') as StringValue,
+      secret: jwt.refreshSecret,
+      expiresIn: jwt.refreshExpiresIn as StringValue,
     });
 
-    return {
+    this.logger.log(`Login successful for user: ${user.id}`);
+
+    const response: LoginResponseDto = {
       accessToken,
       refreshToken,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: UserMapper.toAuthSummary(user),
     };
+    return response;
   }
 }

@@ -1,7 +1,8 @@
 import { CreateCustomerUseCase } from './create-customer.use-case';
-import { CustomerType } from '../../../domain/customer/customer-type.enum';
-import { ICustomerRepository } from '../../../domain/customer/customer.repository.interface';
+import { ICustomerRepository } from '../../../domain/repositories/customer.repository.interface';
 import { ConflictException } from '../../../shared/exceptions/domain.exceptions';
+import { CustomerType } from '../../../domain/enums/customer-type.enum';
+import { Logger } from '@nestjs/common';
 
 const makeRepo = (): jest.Mocked<ICustomerRepository> => ({
   findById: jest.fn(),
@@ -14,13 +15,20 @@ const makeRepo = (): jest.Mocked<ICustomerRepository> => ({
   hasServiceOrders: jest.fn(),
 });
 
+const makeLogger = (): jest.Mocked<Logger> =>
+  ({
+    log: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  }) as unknown as jest.Mocked<Logger>;
+
 describe('CreateCustomerUseCase', () => {
   let useCase: CreateCustomerUseCase;
   let repo: jest.Mocked<ICustomerRepository>;
 
   beforeEach(() => {
     repo = makeRepo();
-    useCase = new CreateCustomerUseCase(repo);
+    useCase = new CreateCustomerUseCase(repo, makeLogger());
   });
 
   const validDto = {
