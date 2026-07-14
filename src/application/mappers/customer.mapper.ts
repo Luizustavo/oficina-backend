@@ -1,6 +1,7 @@
 import { CreateCustomerRequestDto } from '@application/dtos/request/customer.dto';
 import { CustomerResponseDto } from '@application/dtos/response/customer.dto';
 import { CustomerEntity } from '@domain/entities/customer/customer.entity';
+import { randomUUID } from 'crypto';
 
 export class CustomerMapper {
   private constructor() {
@@ -10,14 +11,17 @@ export class CustomerMapper {
   }
 
   public static toEntity(dto: CreateCustomerRequestDto): CustomerEntity {
-    return CustomerEntity.create({
-      name: dto.name,
-      document: dto.document.replace(/\D/g, ''),
-      type: dto.type,
-      email: dto.email,
-      phone: dto.phone,
-      address: dto.address,
-    });
+    return CustomerEntity.create(
+      {
+        name: dto.name,
+        document: dto.document.replace(/\D/g, ''),
+        type: dto.type,
+        email: dto.email,
+        phone: dto.phone,
+        address: dto.address,
+      },
+      randomUUID(),
+    );
   }
 
   public static toResponse(customer: CustomerEntity): CustomerResponseDto {

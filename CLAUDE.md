@@ -39,6 +39,7 @@ src/
 ├── domain/              # Pure business logic — no framework dependencies
 │   ├── entities/        # Rich entities with private props, static create/reconstitute factories
 │   ├── repositories/    # Abstract classes (not interfaces) used as DI tokens
+│   ├── services/        # Abstract classes for external-service ports (e.g. IEmailNotificationService)
 │   ├── validators/
 │   │   └── value-objects/  # CPF, CNPJ, LicensePlate, ServiceOrderStatus VOs
 │   └── enums/
@@ -56,7 +57,8 @@ src/
 │   │   ├── guards/          # JwtAuthGuard (global), RolesGuard
 │   │   ├── decorators/      # @Public(), @Roles(), @CurrentUser()
 │   │   └── filters/         # HttpExceptionFilter (global catch-all)
-│   └── config/              # JwtStrategy, jwt.config
+│   ├── notification/        # ResendEmailNotificationService (IEmailNotificationService impl)
+│   └── config/              # JwtStrategy, jwt.config, email.config
 └── shared/
     └── exceptions/          # Domain exception hierarchy (DomainException subclasses)
 ```
@@ -82,6 +84,8 @@ src/
 **Authentication:** JWT access token (15 min) + refresh token (7 days). `JwtAuthGuard` is applied globally; use `@Public()` decorator to opt out on specific routes. `@Roles()` + `RolesGuard` for role-based authorization (`ADMIN`, `MECHANIC`, `ATTENDANT`). JWT secrets/expirations are read in exactly one place, `jwtConfig()` in `infrastructure/config/jwt.config.ts` — call `jwtConfig()` wherever a secret or TTL is needed (`AuthModule`'s `JwtModule.register`, `JwtStrategy`, `login.use-case.ts`, `refresh-token.use-case.ts`). Never read `process.env.JWT_*` directly outside that function.
 
 **ServiceOrder state machine:** Status transitions are enforced by `ServiceOrderStatusVO` in `domain/validators/value-objects/`. Transition table is defined there — update it when adding new statuses. Valid flow: `RECEIVED → IN_DIAGNOSIS → AWAITING_APPROVAL → IN_PROGRESS → COMPLETED → DELIVERED`; `CANCELED` is reachable from any state except `DELIVERED`.
+
+**Email notifications on status change:** Every ServiceOrder status-transition use case (`start-diagnosis`, `request-approval`, `approve-order`, `complete-order`, `deliver-order`, `cancel-order`) injects `ICustomerRepository` and `IEmailNotificationService` (abstract class port in `domain/services/email-notification.service.interface.ts`) in addition to `IServiceOrderRepository` and `Logger`. After persisting the transition, look up the customer by `updated.customerId` and, if found, call `emailService.sendServiceOrderStatusUpdate({ to, customerName, orderNumber, status })` — skip silently if the customer isn't found. The concrete implementation is `ResendEmailNotificationService` (`infrastructure/notification/`), which uses the [Resend](https://resend.com) API and swallows send failures internally (logs a warning) so a notification outage never fails the status transition. `emailConfig()` in `infrastructure/config/email.config.ts` is the single place reading `RESEND_API_KEY`/`EMAIL_FROM`/`EMAIL_ENABLED`; sending is auto-disabled when `NODE_ENV=test` unless `EMAIL_ENABLED` overrides it.
 
 ### Import Ordering
 
@@ -111,6 +115,8 @@ JWT_REFRESH_SECRET=...
 JWT_REFRESH_EXPIRES_IN=7d
 PORT=3000
 NODE_ENV=development
+RESEND_API_KEY=...
+EMAIL_FROM=onboarding@resend.dev
 ```
 
 ### Test Coverage
