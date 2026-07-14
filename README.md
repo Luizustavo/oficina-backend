@@ -201,8 +201,9 @@ terraform apply
 
 ## Documentação da API
 
+- **Collection completa (OpenAPI, importável no Postman/Insomnia)**: [`docs/openapi.json`](docs/openapi.json) — veja [`docs/openapi.md`](docs/openapi.md) para instruções de importação. Versionada no repositório, não depende da infraestrutura estar no ar.
 - **Swagger local**: http://localhost:3000/api/docs
-- **Collection completa (Postman/OpenAPI)**: _[a publicar]_
+- **Swagger ao vivo**: disponível enquanto a infraestrutura estiver provisionada (veja `infra/README.md`) — pode não responder se a infra tiver sido destruída no momento do acesso
 
 ## Vídeo demonstrativo
 

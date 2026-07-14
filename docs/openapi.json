@@ -1,0 +1,2192 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/health/live": {
+      "get": {
+        "operationId": "HealthController_live",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Liveness probe — process is up",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/health/ready": {
+      "get": {
+        "operationId": "HealthController_ready",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Readiness probe — database connection is healthy",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/service-orders": {
+      "post": {
+        "operationId": "ServiceOrdersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateServiceOrderRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new service order",
+        "tags": [
+          "service-orders"
+        ]
+      },
+      "get": {
+        "operationId": "ServiceOrdersController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List service orders (paginated). Without a status filter, orders are sorted by priority (IN_PROGRESS > AWAITING_APPROVAL > IN_DIAGNOSIS > RECEIVED, oldest first) and COMPLETED/DELIVERED orders are excluded",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/service-orders/customer/{customerId}": {
+      "get": {
+        "operationId": "ServiceOrdersController_listByCustomerHandler",
+        "parameters": [
+          {
+            "name": "customerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List service orders by customer",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/service-orders/status/{status}": {
+      "get": {
+        "operationId": "ServiceOrdersController_listByStatusHandler",
+        "parameters": [
+          {
+            "name": "status",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List service orders by status",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/service-orders/track/{orderNumber}": {
+      "get": {
+        "operationId": "ServiceOrdersController_track",
+        "parameters": [
+          {
+            "name": "orderNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Track service order by number (public, no auth required)",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/service-orders/track/{orderNumber}/budget-decision": {
+      "patch": {
+        "operationId": "ServiceOrdersController_budgetDecisionHandler",
+        "parameters": [
+          {
+            "name": "orderNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetDecisionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Receive an external budget approval/rejection notification (public webhook, no auth required)",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/service-orders/metrics/average-execution-time": {
+      "get": {
+        "operationId": "ServiceOrdersController_averageExecutionTime",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Average execution time per service (admin only)",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/service-orders/{id}": {
+      "get": {
+        "operationId": "ServiceOrdersController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Find service order by ID",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/service-orders/{id}/services": {
+      "patch": {
+        "operationId": "ServiceOrdersController_addServiceHandler",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddServiceRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add service to order",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/service-orders/{id}/parts": {
+      "patch": {
+        "operationId": "ServiceOrdersController_addPartHandler",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddPartRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add part to order (decrements stock)",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/service-orders/{id}/start-diagnosis": {
+      "patch": {
+        "operationId": "ServiceOrdersController_startDiagnosisHandler",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Transition: RECEIVED → IN_DIAGNOSIS",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/service-orders/{id}/request-approval": {
+      "patch": {
+        "operationId": "ServiceOrdersController_requestApprovalHandler",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Transition: IN_DIAGNOSIS → AWAITING_APPROVAL",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/service-orders/{id}/approve": {
+      "patch": {
+        "operationId": "ServiceOrdersController_approveHandler",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Transition: AWAITING_APPROVAL → IN_PROGRESS",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/service-orders/{id}/complete": {
+      "patch": {
+        "operationId": "ServiceOrdersController_completeHandler",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Transition: IN_PROGRESS → COMPLETED",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/service-orders/{id}/deliver": {
+      "patch": {
+        "operationId": "ServiceOrdersController_deliverHandler",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Transition: COMPLETED → DELIVERED",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/service-orders/{id}/cancel": {
+      "patch": {
+        "operationId": "ServiceOrdersController_cancelHandler",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Transition: any → CANCELED",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/customers": {
+      "post": {
+        "operationId": "CustomersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new customer",
+        "tags": [
+          "customers"
+        ]
+      },
+      "get": {
+        "operationId": "CustomersController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List customers (paginated)",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/api/customers/document/{doc}": {
+      "get": {
+        "operationId": "CustomersController_findByDocument",
+        "parameters": [
+          {
+            "name": "doc",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Find customer by CPF/CNPJ",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/api/customers/{id}": {
+      "get": {
+        "operationId": "CustomersController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Find customer by ID",
+        "tags": [
+          "customers"
+        ]
+      },
+      "patch": {
+        "operationId": "CustomersController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomerRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update customer",
+        "tags": [
+          "customers"
+        ]
+      },
+      "delete": {
+        "operationId": "CustomersController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete customer",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/api/vehicles": {
+      "post": {
+        "operationId": "VehiclesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVehicleRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new vehicle",
+        "tags": [
+          "vehicles"
+        ]
+      },
+      "get": {
+        "operationId": "VehiclesController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List vehicles (paginated)",
+        "tags": [
+          "vehicles"
+        ]
+      }
+    },
+    "/api/vehicles/customer/{customerId}": {
+      "get": {
+        "operationId": "VehiclesController_listByCustomerHandler",
+        "parameters": [
+          {
+            "name": "customerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List vehicles by customer",
+        "tags": [
+          "vehicles"
+        ]
+      }
+    },
+    "/api/vehicles/{id}": {
+      "get": {
+        "operationId": "VehiclesController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Find vehicle by ID",
+        "tags": [
+          "vehicles"
+        ]
+      },
+      "patch": {
+        "operationId": "VehiclesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVehicleRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update vehicle",
+        "tags": [
+          "vehicles"
+        ]
+      },
+      "delete": {
+        "operationId": "VehiclesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete vehicle",
+        "tags": [
+          "vehicles"
+        ]
+      }
+    },
+    "/api/services": {
+      "post": {
+        "operationId": "ServicesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateServiceRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new service",
+        "tags": [
+          "services"
+        ]
+      },
+      "get": {
+        "operationId": "ServicesController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "onlyActive",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List active services",
+        "tags": [
+          "services"
+        ]
+      }
+    },
+    "/api/services/{id}": {
+      "get": {
+        "operationId": "ServicesController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Find service by ID",
+        "tags": [
+          "services"
+        ]
+      },
+      "patch": {
+        "operationId": "ServicesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateServiceRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update service",
+        "tags": [
+          "services"
+        ]
+      },
+      "delete": {
+        "operationId": "ServicesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete service",
+        "tags": [
+          "services"
+        ]
+      }
+    },
+    "/api/services/{id}/toggle": {
+      "patch": {
+        "operationId": "ServicesController_toggle",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Toggle service active/inactive",
+        "tags": [
+          "services"
+        ]
+      }
+    },
+    "/api/parts": {
+      "post": {
+        "operationId": "PartsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePartRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new part",
+        "tags": [
+          "parts"
+        ]
+      },
+      "get": {
+        "operationId": "PartsController_list",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "onlyActive",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List parts",
+        "tags": [
+          "parts"
+        ]
+      }
+    },
+    "/api/parts/low-stock": {
+      "get": {
+        "operationId": "PartsController_getLowStock",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List parts with low stock",
+        "tags": [
+          "parts"
+        ]
+      }
+    },
+    "/api/parts/{id}": {
+      "get": {
+        "operationId": "PartsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Find part by ID",
+        "tags": [
+          "parts"
+        ]
+      },
+      "patch": {
+        "operationId": "PartsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePartRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update part",
+        "tags": [
+          "parts"
+        ]
+      },
+      "delete": {
+        "operationId": "PartsController_deletePartHandler",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete part",
+        "tags": [
+          "parts"
+        ]
+      }
+    },
+    "/api/parts/{id}/stock/add": {
+      "patch": {
+        "operationId": "PartsController_add",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockOperationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Add stock to part",
+        "tags": [
+          "parts"
+        ]
+      }
+    },
+    "/api/parts/{id}/stock/remove": {
+      "patch": {
+        "operationId": "PartsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockOperationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Manually remove stock from part",
+        "tags": [
+          "parts"
+        ]
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "User login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Refresh access token",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/users": {
+      "post": {
+        "operationId": "AuthController_createUser",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new user (ADMIN only)",
+        "tags": [
+          "auth"
+        ]
+      },
+      "get": {
+        "operationId": "AuthController_listUsers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all users (ADMIN only)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "operationId": "AuthController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get current user data",
+        "tags": [
+          "auth"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Oficina Backend API",
+    "description": "Mechanical Workshop Management System - Tech Challenge SOAT Fase 1",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "CreateServiceOrderRequestDto": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "example": "uuid-do-cliente"
+          },
+          "vehicleId": {
+            "type": "string",
+            "example": "uuid-do-veiculo"
+          },
+          "problemDescription": {
+            "type": "string",
+            "example": "Carro fazendo barulho ao frear e perda de potência"
+          },
+          "notes": {
+            "type": "string",
+            "example": "Cliente relatou início dos sintomas há 1 semana"
+          }
+        },
+        "required": [
+          "customerId",
+          "vehicleId",
+          "problemDescription"
+        ]
+      },
+      "BudgetDecisionRequestDto": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "enum": [
+              "APPROVED",
+              "REJECTED"
+            ],
+            "type": "string",
+            "example": "APPROVED"
+          }
+        },
+        "required": [
+          "decision"
+        ]
+      },
+      "AddServiceRequestDto": {
+        "type": "object",
+        "properties": {
+          "serviceId": {
+            "type": "string",
+            "example": "uuid-do-servico"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1,
+            "example": 1
+          },
+          "notes": {
+            "type": "string",
+            "example": "Incluir troca de filtro de ar junto"
+          }
+        },
+        "required": [
+          "serviceId"
+        ]
+      },
+      "AddPartRequestDto": {
+        "type": "object",
+        "properties": {
+          "partId": {
+            "type": "string",
+            "example": "uuid-da-peca"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1,
+            "example": 2
+          }
+        },
+        "required": [
+          "partId",
+          "quantity"
+        ]
+      },
+      "CreateCustomerRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "example": "Carlos Pereira"
+          },
+          "document": {
+            "type": "string",
+            "example": "123.456.789-09"
+          },
+          "type": {
+            "enum": [
+              "INDIVIDUAL",
+              "COMPANY"
+            ],
+            "type": "string",
+            "example": "INDIVIDUAL"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "carlos@email.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "(11) 99999-0000"
+          },
+          "address": {
+            "type": "string",
+            "example": "Rua das Flores, 123 - São Paulo/SP"
+          }
+        },
+        "required": [
+          "name",
+          "document",
+          "type",
+          "email",
+          "phone"
+        ]
+      },
+      "UpdateCustomerRequestDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "1254524"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "example": "Carlos A. Pereira"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "carlos.novo@email.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "(11) 98765-4321"
+          },
+          "address": {
+            "type": "string",
+            "example": "Av. Paulista, 1000 - São Paulo/SP"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      },
+      "CreateVehicleRequestDto": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string",
+            "example": "uuid-do-cliente"
+          },
+          "licensePlate": {
+            "type": "string",
+            "example": "ABC-1234"
+          },
+          "brand": {
+            "type": "string",
+            "example": "Toyota"
+          },
+          "model": {
+            "type": "string",
+            "example": "Corolla"
+          },
+          "year": {
+            "type": "number",
+            "minimum": 1900,
+            "maximum": 2100,
+            "example": 2022
+          },
+          "color": {
+            "type": "string",
+            "example": "Prata"
+          }
+        },
+        "required": [
+          "customerId",
+          "licensePlate",
+          "brand",
+          "model",
+          "year"
+        ]
+      },
+      "UpdateVehicleRequestDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string",
+            "example": "Volkswagen"
+          },
+          "model": {
+            "type": "string",
+            "example": "Gol"
+          },
+          "year": {
+            "type": "number",
+            "minimum": 1900,
+            "maximum": 2100,
+            "example": 2023
+          },
+          "color": {
+            "type": "string",
+            "example": "Branco"
+          }
+        }
+      },
+      "CreateServiceRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Troca de óleo"
+          },
+          "description": {
+            "type": "string",
+            "example": "Troca de óleo do motor com filtro"
+          },
+          "price": {
+            "type": "number",
+            "minimum": 0.01,
+            "example": 150
+          },
+          "estimatedDurationMinutes": {
+            "type": "number",
+            "minimum": 1,
+            "example": 60
+          }
+        },
+        "required": [
+          "name",
+          "price",
+          "estimatedDurationMinutes"
+        ]
+      },
+      "UpdateServiceRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Troca de óleo completa"
+          },
+          "description": {
+            "type": "string",
+            "example": "Troca de óleo com filtro de ar e vela"
+          },
+          "price": {
+            "type": "number",
+            "minimum": 0.01,
+            "example": 180
+          },
+          "estimatedDurationMinutes": {
+            "type": "number",
+            "minimum": 1,
+            "example": 90
+          }
+        }
+      },
+      "CreatePartRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Filtro de óleo"
+          },
+          "code": {
+            "type": "string",
+            "example": "FO-001"
+          },
+          "description": {
+            "type": "string",
+            "example": "Filtro de óleo para motores 1.0 e 1.4"
+          },
+          "price": {
+            "type": "number",
+            "minimum": 0.01,
+            "example": 35.9
+          },
+          "stockQuantity": {
+            "type": "number",
+            "minimum": 0,
+            "example": 50
+          },
+          "minStockQuantity": {
+            "type": "number",
+            "minimum": 0,
+            "example": 10
+          }
+        },
+        "required": [
+          "name",
+          "code",
+          "price",
+          "stockQuantity",
+          "minStockQuantity"
+        ]
+      },
+      "UpdatePartRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Filtro de óleo premium"
+          },
+          "description": {
+            "type": "string",
+            "example": "Filtro premium para motores 1.0, 1.4 e 1.6"
+          },
+          "price": {
+            "type": "number",
+            "minimum": 0.01,
+            "example": 45.9
+          },
+          "minStockQuantity": {
+            "type": "number",
+            "minimum": 0,
+            "example": 15
+          }
+        }
+      },
+      "StockOperationDto": {
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "type": "number",
+            "minimum": 1,
+            "example": 20
+          }
+        },
+        "required": [
+          "quantity"
+        ]
+      },
+      "LoginRequestDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "admin@oficina.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6,
+            "example": "Admin123!"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "RefreshTokenRequestDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "CreateUserRequestDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "example": "João da Silva"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "joao@oficina.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6,
+            "example": "Senha123!"
+          },
+          "role": {
+            "enum": [
+              "ADMIN",
+              "MECHANIC",
+              "ATTENDANT"
+            ],
+            "type": "string",
+            "example": "MECHANIC"
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "password",
+          "role"
+        ]
+      }
+    }
+  }
+}
