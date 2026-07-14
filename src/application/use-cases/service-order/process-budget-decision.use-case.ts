@@ -1,3 +1,7 @@
+import {
+  BudgetDecisionRequestDto,
+  BudgetDecision,
+} from '@application/dtos/request/service-order.dto';
 import { IEmailNotificationService } from '@domain/services/email-notification.service.interface';
 import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
 import { ServiceOrderResponseDto } from '@application/dtos/response/service-order.dto';
@@ -7,7 +11,7 @@ import { ServiceOrderMapper } from '@application/mappers/service-order.mapper';
 import { NotFoundException } from '@shared/exceptions/domain.exceptions';
 
 @Injectable()
-export class StartDiagnosisUseCase {
+export class ProcessBudgetDecisionUseCase {
   constructor(
     private readonly orderRepository: IServiceOrderRepository,
     private readonly customerRepository: ICustomerRepository,
@@ -15,16 +19,27 @@ export class StartDiagnosisUseCase {
     private readonly logger: Logger,
   ) {}
 
-  async execute(id: string): Promise<ServiceOrderResponseDto> {
-    this.logger.log(`Starting diagnosis for service order: ${id}`);
+  async execute(
+    orderNumber: string,
+    dto: BudgetDecisionRequestDto,
+  ): Promise<ServiceOrderResponseDto> {
+    this.logger.log(
+      `Processing external budget decision for order ${orderNumber}: ${dto.decision}`,
+    );
 
-    const order = await this.orderRepository.findById(id);
+    const order = await this.orderRepository.findByOrderNumber(orderNumber);
     if (!order) {
-      this.logger.warn(`Service order not found with ID: ${id}`);
-      throw new NotFoundException('ServiceOrder', id);
+      this.logger.warn(
+        `Service order not found with order number: ${orderNumber}`,
+      );
+      throw new NotFoundException('ServiceOrder', orderNumber);
     }
 
-    order.startDiagnosis();
+    if (dto.decision === BudgetDecision.APPROVED) {
+      order.approve();
+    } else {
+      order.cancel();
+    }
     const updated = await this.orderRepository.update(order);
 
     const customer = await this.customerRepository.findById(updated.customerId);
@@ -37,7 +52,9 @@ export class StartDiagnosisUseCase {
       });
     }
 
-    this.logger.log(`Service order ${id} transitioned to IN_DIAGNOSIS`);
+    this.logger.log(
+      `Service order ${orderNumber} budget decision processed, transitioned to ${updated.status}`,
+    );
 
     const response: ServiceOrderResponseDto =
       ServiceOrderMapper.toResponse(updated);

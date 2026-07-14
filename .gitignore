@@ -28,3 +28,17 @@ Thumbs.db
 .idea/
 .vscode/
 
+# Terraform state and local cache — contains secrets (DB password, etc.)
+# .terraform.lock.hcl is intentionally NOT ignored — it should be committed
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/*.tfvars
+!infra/*.tfvars.example
+infra/crash.log
+infra/override.tf
+infra/override.tf.json
+
+# Kubernetes secrets with real values — only the .example template is committed
+k8s/secret.yaml
+

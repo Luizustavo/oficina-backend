@@ -1,0 +1,20 @@
+# Applied by the CD pipeline before rolling out a new Deployment revision.
+# `kubectl apply -f migration-job.yaml && kubectl wait --for=condition=complete job/oficina-backend-migrate -n oficina --timeout=120s`
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: oficina-backend-migrate
+  namespace: oficina
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: REPLACE_WITH_ECR_IMAGE_URI:latest
+          command: ["npx", "prisma", "migrate", "deploy"]
+          envFrom:
+            - secretRef:
+                name: oficina-backend-secret

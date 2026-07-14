@@ -32,6 +32,19 @@ const VALID_TRANSITIONS: Record<ServiceOrderStatus, ServiceOrderStatus[]> = {
   [ServiceOrderStatus.CANCELED]: [],
 };
 
+export const SERVICE_ORDER_LIST_STATUS_PRIORITY: ServiceOrderStatus[] = [
+  ServiceOrderStatus.IN_PROGRESS,
+  ServiceOrderStatus.AWAITING_APPROVAL,
+  ServiceOrderStatus.IN_DIAGNOSIS,
+  ServiceOrderStatus.RECEIVED,
+  ServiceOrderStatus.CANCELED,
+];
+
+export const SERVICE_ORDER_LIST_EXCLUDED_STATUSES: ServiceOrderStatus[] = [
+  ServiceOrderStatus.COMPLETED,
+  ServiceOrderStatus.DELIVERED,
+];
+
 export class ServiceOrderStatusVO {
   private readonly value: ServiceOrderStatus;
 

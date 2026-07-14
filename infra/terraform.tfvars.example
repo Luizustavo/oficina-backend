@@ -1,0 +1,14 @@
+# Copy this file to terraform.tfvars and adjust as needed.
+# terraform.tfvars is gitignored — never commit real values here.
+
+aws_region   = "sa-east-1"
+aws_profile  = "oficina-fase2"
+project_name = "oficina-backend"
+
+k3s_instance_type = "t3.small"
+k3s_node_port      = 30080
+
+db_instance_class = "db.t4g.micro"
+
+budget_alert_threshold_usd = 12
+budget_alert_email         = "luizgustavodesouzasantos23@gmail.com"
