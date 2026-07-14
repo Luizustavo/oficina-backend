@@ -1,4 +1,5 @@
 import { ServiceOrdersModule } from './infrastructure/presentation/modules/service-orders.module';
+import { HealthController } from './infrastructure/presentation/controllers/health.controller';
 import { CustomersModule } from './infrastructure/presentation/modules/customers.module';
 import { VehiclesModule } from './infrastructure/presentation/modules/vehicles.module';
 import { ServicesModule } from './infrastructure/presentation/modules/services.module';
@@ -20,6 +21,7 @@ import { Module } from '@nestjs/common';
     PartsModule,
     AuthModule,
   ],
+  controllers: [HealthController],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
