@@ -10,6 +10,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
 import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
 import { ServiceOrderMapper } from '@application/mappers/service-order.mapper';
+import { randomUUID } from 'crypto';
 
 function generateOrderNumber(): string {
   const now = new Date();
@@ -62,13 +63,16 @@ export class CreateServiceOrderUseCase {
       );
     }
 
-    const order = ServiceOrderEntity.create({
-      orderNumber: generateOrderNumber(),
-      customerId: dto.customerId,
-      vehicleId: dto.vehicleId,
-      problemDescription: dto.problemDescription,
-      notes: dto.notes,
-    });
+    const order = ServiceOrderEntity.create(
+      {
+        orderNumber: generateOrderNumber(),
+        customerId: dto.customerId,
+        vehicleId: dto.vehicleId,
+        problemDescription: dto.problemDescription,
+        notes: dto.notes,
+      },
+      randomUUID(),
+    );
 
     const created = await this.orderRepository.create(order);
 

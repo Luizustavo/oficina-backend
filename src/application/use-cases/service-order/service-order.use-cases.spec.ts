@@ -7,6 +7,7 @@ import { ListServiceOrdersByCustomerUseCase } from './list-service-orders-by-cus
 import { ListServiceOrdersByStatusUseCase } from './list-service-orders-by-status.use-case';
 import { GetAverageExecutionTimeUseCase } from './get-average-execution-time.use-case';
 import { CreateServiceOrderUseCase } from './create-service-order.use-case';
+import { IEmailNotificationService } from '@domain/services/email-notification.service.interface';
 import { ListServiceOrdersUseCase } from './list-service-orders.use-case';
 import { AddServiceToOrderUseCase } from './add-service-to-order.use-case';
 import { TrackServiceOrderUseCase } from './track-service-order.use-case';
@@ -24,6 +25,8 @@ import { IVehicleRepository } from '@domain/repositories/vehicle.repository.inte
 import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
 import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
 import { IPartRepository } from '@domain/repositories/part.repository.interface';
+import { CustomerEntity } from '@domain/entities/customer/customer.entity';
+import { CustomerType } from '@domain/enums/customer-type.enum';
 import { PartEntity } from '@domain/entities/part/part.entity';
 import { Logger } from '@nestjs/common';
 
@@ -38,10 +41,14 @@ const makeOrderRepo = (): jest.Mocked<IServiceOrderRepository> => ({
   update: jest.fn(),
 });
 
-const makeCustomerRepo = (): jest.Mocked<
-  Pick<ICustomerRepository, 'existsById'>
-> => ({
-  existsById: jest.fn(),
+const makeCustomerRepo = (): jest.Mocked<ICustomerRepository> =>
+  ({
+    existsById: jest.fn(),
+    findById: jest.fn(),
+  }) as unknown as jest.Mocked<ICustomerRepository>;
+
+const makeEmailService = (): jest.Mocked<IEmailNotificationService> => ({
+  sendServiceOrderStatusUpdate: jest.fn(),
 });
 
 const makeVehicleRepo = (): jest.Mocked<
@@ -81,24 +88,74 @@ const makeOrder = (status = ServiceOrderStatus.RECEIVED) =>
     'so-1',
   );
 
+const makeCustomer = () =>
+  CustomerEntity.reconstitute(
+    {
+      name: 'Jane Doe',
+      document: '12345678900',
+      type: CustomerType.INDIVIDUAL,
+      email: 'jane@example.com',
+      phone: '11999999999',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+    'c-1',
+  );
+
 describe('StartDiagnosisUseCase', () => {
-  it('should transition order to IN_DIAGNOSIS', async () => {
+  it('should transition order to IN_DIAGNOSIS and notify the customer by email', async () => {
     const repo = makeOrderRepo();
+    const customerRepo = makeCustomerRepo();
+    const emailService = makeEmailService();
     const order = makeOrder();
     repo.findById.mockResolvedValue(order);
     repo.update.mockImplementation(async (o) => o);
+    customerRepo.findById.mockResolvedValue(makeCustomer());
 
-    const result = await new StartDiagnosisUseCase(repo, makeLogger()).execute(
-      'so-1',
-    );
+    const result = await new StartDiagnosisUseCase(
+      repo,
+      customerRepo,
+      emailService,
+      makeLogger(),
+    ).execute('so-1');
     expect(result.status).toBe(ServiceOrderStatus.IN_DIAGNOSIS);
+    expect(emailService.sendServiceOrderStatusUpdate).toHaveBeenCalledWith({
+      to: 'jane@example.com',
+      customerName: 'Jane Doe',
+      orderNumber: 'OS001',
+      status: ServiceOrderStatus.IN_DIAGNOSIS,
+    });
+  });
+
+  it('should skip the email notification when the customer cannot be found', async () => {
+    const repo = makeOrderRepo();
+    const customerRepo = makeCustomerRepo();
+    const emailService = makeEmailService();
+    const order = makeOrder();
+    repo.findById.mockResolvedValue(order);
+    repo.update.mockImplementation(async (o) => o);
+    customerRepo.findById.mockResolvedValue(null);
+
+    const result = await new StartDiagnosisUseCase(
+      repo,
+      customerRepo,
+      emailService,
+      makeLogger(),
+    ).execute('so-1');
+    expect(result.status).toBe(ServiceOrderStatus.IN_DIAGNOSIS);
+    expect(emailService.sendServiceOrderStatusUpdate).not.toHaveBeenCalled();
   });
 
   it('should throw NotFoundException when order not found', async () => {
     const repo = makeOrderRepo();
     repo.findById.mockResolvedValue(null);
     await expect(
-      new StartDiagnosisUseCase(repo, makeLogger()).execute('missing'),
+      new StartDiagnosisUseCase(
+        repo,
+        makeCustomerRepo(),
+        makeEmailService(),
+        makeLogger(),
+      ).execute('missing'),
     ).rejects.toThrow(NotFoundException);
   });
 });
@@ -106,13 +163,18 @@ describe('StartDiagnosisUseCase', () => {
 describe('CancelOrderUseCase', () => {
   it('should cancel a RECEIVED order', async () => {
     const repo = makeOrderRepo();
+    const customerRepo = makeCustomerRepo();
     const order = makeOrder();
     repo.findById.mockResolvedValue(order);
     repo.update.mockImplementation(async (o) => o);
+    customerRepo.findById.mockResolvedValue(makeCustomer());
 
-    const result = await new CancelOrderUseCase(repo, makeLogger()).execute(
-      'so-1',
-    );
+    const result = await new CancelOrderUseCase(
+      repo,
+      customerRepo,
+      makeEmailService(),
+      makeLogger(),
+    ).execute('so-1');
     expect(result.status).toBe(ServiceOrderStatus.CANCELED);
   });
 
@@ -121,7 +183,12 @@ describe('CancelOrderUseCase', () => {
     repo.findById.mockResolvedValue(makeOrder(ServiceOrderStatus.DELIVERED));
 
     await expect(
-      new CancelOrderUseCase(repo, makeLogger()).execute('so-1'),
+      new CancelOrderUseCase(
+        repo,
+        makeCustomerRepo(),
+        makeEmailService(),
+        makeLogger(),
+      ).execute('so-1'),
     ).rejects.toThrow();
   });
 });
@@ -188,13 +255,18 @@ describe('ListServiceOrdersByStatusUseCase', () => {
 describe('RequestApprovalUseCase', () => {
   it('should request approval from IN_DIAGNOSIS status', async () => {
     const repo = makeOrderRepo();
+    const customerRepo = makeCustomerRepo();
     const order = makeOrder(ServiceOrderStatus.IN_DIAGNOSIS);
     repo.findById.mockResolvedValue(order);
     repo.update.mockImplementation(async (o) => o);
+    customerRepo.findById.mockResolvedValue(makeCustomer());
 
-    const result = await new RequestApprovalUseCase(repo, makeLogger()).execute(
-      'so-1',
-    );
+    const result = await new RequestApprovalUseCase(
+      repo,
+      customerRepo,
+      makeEmailService(),
+      makeLogger(),
+    ).execute('so-1');
     expect(result.status).toBe(ServiceOrderStatus.AWAITING_APPROVAL);
   });
 
@@ -202,7 +274,12 @@ describe('RequestApprovalUseCase', () => {
     const repo = makeOrderRepo();
     repo.findById.mockResolvedValue(null);
     await expect(
-      new RequestApprovalUseCase(repo, makeLogger()).execute('missing'),
+      new RequestApprovalUseCase(
+        repo,
+        makeCustomerRepo(),
+        makeEmailService(),
+        makeLogger(),
+      ).execute('missing'),
     ).rejects.toThrow(NotFoundException);
   });
 });
@@ -210,13 +287,18 @@ describe('RequestApprovalUseCase', () => {
 describe('ApproveOrderUseCase', () => {
   it('should approve an order awaiting approval', async () => {
     const repo = makeOrderRepo();
+    const customerRepo = makeCustomerRepo();
     const order = makeOrder(ServiceOrderStatus.AWAITING_APPROVAL);
     repo.findById.mockResolvedValue(order);
     repo.update.mockImplementation(async (o) => o);
+    customerRepo.findById.mockResolvedValue(makeCustomer());
 
-    const result = await new ApproveOrderUseCase(repo, makeLogger()).execute(
-      'so-1',
-    );
+    const result = await new ApproveOrderUseCase(
+      repo,
+      customerRepo,
+      makeEmailService(),
+      makeLogger(),
+    ).execute('so-1');
     expect(result.status).toBe(ServiceOrderStatus.IN_PROGRESS);
   });
 
@@ -224,7 +306,12 @@ describe('ApproveOrderUseCase', () => {
     const repo = makeOrderRepo();
     repo.findById.mockResolvedValue(null);
     await expect(
-      new ApproveOrderUseCase(repo, makeLogger()).execute('missing'),
+      new ApproveOrderUseCase(
+        repo,
+        makeCustomerRepo(),
+        makeEmailService(),
+        makeLogger(),
+      ).execute('missing'),
     ).rejects.toThrow(NotFoundException);
   });
 });
@@ -284,20 +371,27 @@ describe('AddServiceToOrderUseCase', () => {
 describe('CompleteOrderUseCase → DeliverOrderUseCase pipeline', () => {
   it('should complete then deliver an order', async () => {
     const repo = makeOrderRepo();
+    const customerRepo = makeCustomerRepo();
     const order = makeOrder(ServiceOrderStatus.IN_PROGRESS);
     repo.findById.mockResolvedValue(order);
     repo.update.mockImplementation(async (o) => o);
+    customerRepo.findById.mockResolvedValue(makeCustomer());
 
     const completed = await new CompleteOrderUseCase(
       repo,
+      customerRepo,
+      makeEmailService(),
       makeLogger(),
     ).execute('so-1');
     expect(completed.status).toBe(ServiceOrderStatus.COMPLETED);
 
     repo.findById.mockResolvedValue(order);
-    const delivered = await new DeliverOrderUseCase(repo, makeLogger()).execute(
-      'so-1',
-    );
+    const delivered = await new DeliverOrderUseCase(
+      repo,
+      customerRepo,
+      makeEmailService(),
+      makeLogger(),
+    ).execute('so-1');
     expect(delivered.status).toBe(ServiceOrderStatus.DELIVERED);
     expect(delivered.deliveredAt).toBeInstanceOf(Date);
   });
