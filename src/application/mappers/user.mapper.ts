@@ -5,6 +5,7 @@ import {
 import { CreateUserRequestDto } from '@application/dtos/request/auth.dto';
 import { UserEntity } from '@domain/entities/user/user.entity';
 import { JwtPayload } from '@infrastructure/presentation/decorators/current-user.decorator';
+import { randomUUID } from 'crypto';
 
 export class UserMapper {
   private constructor() {
@@ -12,12 +13,15 @@ export class UserMapper {
   }
 
   public static toEntity(dto: CreateUserRequestDto): UserEntity {
-    return UserEntity.create({
-      email: dto.email,
-      name: dto.name,
-      password: dto.password,
-      role: dto.role,
-    });
+    return UserEntity.create(
+      {
+        email: dto.email,
+        name: dto.name,
+        password: dto.password,
+        role: dto.role,
+      },
+      randomUUID(),
+    );
   }
 
   public static toResponse(user: UserEntity): UserResponseDto {

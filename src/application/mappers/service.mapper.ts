@@ -1,6 +1,7 @@
 import { CreateServiceRequestDto } from '@application/dtos/request/service.dto';
 import { ServiceResponseDto } from '@application/dtos/response/service.dto';
 import { ServiceEntity } from '@domain/entities/service/service.entity';
+import { randomUUID } from 'crypto';
 
 export class ServiceMapper {
   private constructor() {
@@ -10,7 +11,7 @@ export class ServiceMapper {
   }
 
   public static toEntity(dto: CreateServiceRequestDto): ServiceEntity {
-    return ServiceEntity.create({ ...dto });
+    return ServiceEntity.create({ ...dto }, randomUUID());
   }
 
   public static toResponse(service: ServiceEntity): ServiceResponseDto {

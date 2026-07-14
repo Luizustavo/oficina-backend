@@ -1,5 +1,6 @@
 import {
   CreateServiceOrderRequestDto,
+  BudgetDecisionRequestDto,
   AddServiceRequestDto,
   AddPartRequestDto,
 } from '@application/dtos/request/service-order.dto';
@@ -16,6 +17,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ListServiceOrdersByCustomerUseCase } from '@application/use-cases/service-order/list-service-orders-by-customer.use-case';
 import { ListServiceOrdersByStatusUseCase } from '@application/use-cases/service-order/list-service-orders-by-status.use-case';
 import { GetAverageExecutionTimeUseCase } from '@application/use-cases/service-order/get-average-execution-time.use-case';
+import { ProcessBudgetDecisionUseCase } from '@application/use-cases/service-order/process-budget-decision.use-case';
 import { CreateServiceOrderUseCase } from '@application/use-cases/service-order/create-service-order.use-case';
 import { ListServiceOrdersUseCase } from '@application/use-cases/service-order/list-service-orders.use-case';
 import { AddServiceToOrderUseCase } from '@application/use-cases/service-order/add-service-to-order.use-case';
@@ -53,6 +55,7 @@ export class ServiceOrdersController {
     private readonly addService: AddServiceToOrderUseCase,
     private readonly getOrder: GetServiceOrderUseCase,
     private readonly addPart: AddPartToOrderUseCase,
+    private readonly processBudgetDecision: ProcessBudgetDecisionUseCase,
   ) {}
 
   @Post()
@@ -62,7 +65,10 @@ export class ServiceOrdersController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List all service orders (paginated)' })
+  @ApiOperation({
+    summary:
+      'List service orders (paginated). Without a status filter, orders are sorted by priority (IN_PROGRESS > AWAITING_APPROVAL > IN_DIAGNOSIS > RECEIVED, oldest first) and COMPLETED/DELIVERED orders are excluded',
+  })
   async list(
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -94,6 +100,19 @@ export class ServiceOrdersController {
   })
   async track(@Param('orderNumber') orderNumber: string) {
     return this.trackOrder.execute(orderNumber);
+  }
+
+  @Patch('track/:orderNumber/budget-decision')
+  @Public()
+  @ApiOperation({
+    summary:
+      'Receive an external budget approval/rejection notification (public webhook, no auth required)',
+  })
+  async budgetDecisionHandler(
+    @Param('orderNumber') orderNumber: string,
+    @Body() dto: BudgetDecisionRequestDto,
+  ) {
+    return this.processBudgetDecision.execute(orderNumber, dto);
   }
 
   @Get('metrics/average-execution-time')

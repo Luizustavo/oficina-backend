@@ -1,6 +1,7 @@
 import { CreatePartRequestDto } from '@application/dtos/request/part.dto';
 import { PartResponseDto } from '@application/dtos/response/part.dto';
 import { PartEntity } from '@domain/entities/part/part.entity';
+import { randomUUID } from 'crypto';
 
 export class PartMapper {
   private constructor() {
@@ -8,7 +9,7 @@ export class PartMapper {
   }
 
   public static toEntity(dto: CreatePartRequestDto): PartEntity {
-    return PartEntity.create({ ...dto });
+    return PartEntity.create({ ...dto }, randomUUID());
   }
 
   public static toResponse(part: PartEntity): PartResponseDto {

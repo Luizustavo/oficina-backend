@@ -1,0 +1,17 @@
+# NodePort instead of LoadBalancer: a plain k3s install has no AWS integration
+# to provision a real ELB, so the app is reached directly at
+# http://<node-public-ip>:30080 (see infra/README.md).
+apiVersion: v1
+kind: Service
+metadata:
+  name: oficina-backend
+  namespace: oficina
+spec:
+  type: NodePort
+  selector:
+    app: oficina-backend
+  ports:
+    - port: 80
+      targetPort: 3000
+      nodePort: 30080
+      protocol: TCP

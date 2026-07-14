@@ -1,3 +1,8 @@
+import {
+  SERVICE_ORDER_LIST_EXCLUDED_STATUSES,
+  SERVICE_ORDER_LIST_STATUS_PRIORITY,
+} from '@domain/validators/value-objects/service-order-status.value-object';
+import { ServiceOrder as PrismaServiceOrder } from '@generated/prisma/client';
 import { PrismaServiceOrderMapper } from '@infrastructure/database/prisma/mappers/prisma-service-order.mapper';
 import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
 import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
@@ -53,16 +58,63 @@ export class ServiceOrderRepository implements IServiceOrderRepository {
     take?: number;
     status?: ServiceOrderStatus;
   }): Promise<{ data: ServiceOrderEntity[]; total: number }> {
-    const where = params.status ? { status: params.status } : {};
-    const [records, total] = await Promise.all([
-      this.prisma.serviceOrder.findMany({
-        where,
-        skip: params.skip ?? 0,
-        take: params.take ?? 20,
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.serviceOrder.count({ where }),
-    ]);
+    if (params.status) {
+      const where = { status: params.status };
+      const [records, total] = await Promise.all([
+        this.prisma.serviceOrder.findMany({
+          where,
+          skip: params.skip ?? 0,
+          take: params.take ?? 20,
+          orderBy: { createdAt: 'desc' },
+        }),
+        this.prisma.serviceOrder.count({ where }),
+      ]);
+      return {
+        data: records.map((item) => PrismaServiceOrderMapper.toEntity(item)),
+        total,
+      };
+    }
+
+    return this.findAllOrderedByListPriority(
+      params.skip ?? 0,
+      params.take ?? 20,
+    );
+  }
+
+  private async findAllOrderedByListPriority(
+    skip: number,
+    take: number,
+  ): Promise<{ data: ServiceOrderEntity[]; total: number }> {
+    let remainingSkip = skip;
+    let remainingTake = take;
+    const records: PrismaServiceOrder[] = [];
+
+    for (const status of SERVICE_ORDER_LIST_STATUS_PRIORITY) {
+      if (remainingTake <= 0) break;
+
+      const bucketCount = await this.prisma.serviceOrder.count({
+        where: { status },
+      });
+      if (remainingSkip >= bucketCount) {
+        remainingSkip -= bucketCount;
+        continue;
+      }
+
+      const bucketRecords = await this.prisma.serviceOrder.findMany({
+        where: { status },
+        orderBy: { createdAt: 'asc' },
+        skip: remainingSkip,
+        take: remainingTake,
+      });
+      records.push(...bucketRecords);
+      remainingTake -= bucketRecords.length;
+      remainingSkip = 0;
+    }
+
+    const total = await this.prisma.serviceOrder.count({
+      where: { status: { notIn: SERVICE_ORDER_LIST_EXCLUDED_STATUSES } },
+    });
+
     return {
       data: records.map((item) => PrismaServiceOrderMapper.toEntity(item)),
       total,

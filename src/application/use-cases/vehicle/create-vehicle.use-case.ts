@@ -9,6 +9,7 @@ import { IVehicleRepository } from '@domain/repositories/vehicle.repository.inte
 import { VehicleResponseDto } from '@application/dtos/response/vehicle.dto';
 import { VehicleEntity } from '@domain/entities/vehicle/vehicle.entity';
 import { VehicleMapper } from '@application/mappers/vehicle.mapper';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class CreateVehicleUseCase {
@@ -43,14 +44,17 @@ export class CreateVehicleUseCase {
       );
     }
 
-    const vehicle = VehicleEntity.create({
-      customerId: dto.customerId,
-      licensePlate: dto.licensePlate,
-      brand: dto.brand,
-      model: dto.model,
-      year: dto.year,
-      color: dto.color,
-    });
+    const vehicle = VehicleEntity.create(
+      {
+        customerId: dto.customerId,
+        licensePlate: dto.licensePlate,
+        brand: dto.brand,
+        model: dto.model,
+        year: dto.year,
+        color: dto.color,
+      },
+      randomUUID(),
+    );
 
     const created = await this.vehicleRepository.create(vehicle);
 
