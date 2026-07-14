@@ -6,6 +6,7 @@ import {
 import { ListServiceOrdersByCustomerUseCase } from './list-service-orders-by-customer.use-case';
 import { ListServiceOrdersByStatusUseCase } from './list-service-orders-by-status.use-case';
 import { GetAverageExecutionTimeUseCase } from './get-average-execution-time.use-case';
+import { ProcessBudgetDecisionUseCase } from './process-budget-decision.use-case';
 import { CreateServiceOrderUseCase } from './create-service-order.use-case';
 import { IEmailNotificationService } from '@domain/services/email-notification.service.interface';
 import { ListServiceOrdersUseCase } from './list-service-orders.use-case';
@@ -25,6 +26,7 @@ import { IVehicleRepository } from '@domain/repositories/vehicle.repository.inte
 import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
 import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
 import { IPartRepository } from '@domain/repositories/part.repository.interface';
+import { BudgetDecision } from '@application/dtos/request/service-order.dto';
 import { CustomerEntity } from '@domain/entities/customer/customer.entity';
 import { CustomerType } from '@domain/enums/customer-type.enum';
 import { PartEntity } from '@domain/entities/part/part.entity';
@@ -554,5 +556,79 @@ describe('GetAverageExecutionTimeUseCase', () => {
     expect(result.byService).toHaveLength(1);
     expect(result.byService[0].serviceId).toBe('s-1');
     expect(result.byService[0].averageMinutes).toBe(120);
+  });
+});
+
+describe('ProcessBudgetDecisionUseCase', () => {
+  it('should approve the order when decision is APPROVED', async () => {
+    const repo = makeOrderRepo();
+    const customerRepo = makeCustomerRepo();
+    const emailService = makeEmailService();
+    const order = makeOrder(ServiceOrderStatus.AWAITING_APPROVAL);
+    repo.findByOrderNumber.mockResolvedValue(order);
+    repo.update.mockImplementation(async (o) => o);
+    customerRepo.findById.mockResolvedValue(makeCustomer());
+
+    const result = await new ProcessBudgetDecisionUseCase(
+      repo,
+      customerRepo,
+      emailService,
+      makeLogger(),
+    ).execute('OS001', { decision: BudgetDecision.APPROVED });
+
+    expect(result.status).toBe(ServiceOrderStatus.IN_PROGRESS);
+    expect(emailService.sendServiceOrderStatusUpdate).toHaveBeenCalledWith({
+      to: 'jane@example.com',
+      customerName: 'Jane Doe',
+      orderNumber: 'OS001',
+      status: ServiceOrderStatus.IN_PROGRESS,
+    });
+  });
+
+  it('should cancel the order when decision is REJECTED', async () => {
+    const repo = makeOrderRepo();
+    const customerRepo = makeCustomerRepo();
+    const order = makeOrder(ServiceOrderStatus.AWAITING_APPROVAL);
+    repo.findByOrderNumber.mockResolvedValue(order);
+    repo.update.mockImplementation(async (o) => o);
+    customerRepo.findById.mockResolvedValue(null);
+
+    const result = await new ProcessBudgetDecisionUseCase(
+      repo,
+      customerRepo,
+      makeEmailService(),
+      makeLogger(),
+    ).execute('OS001', { decision: BudgetDecision.REJECTED });
+
+    expect(result.status).toBe(ServiceOrderStatus.CANCELED);
+  });
+
+  it('should throw NotFoundException when order number does not exist', async () => {
+    const repo = makeOrderRepo();
+    repo.findByOrderNumber.mockResolvedValue(null);
+
+    await expect(
+      new ProcessBudgetDecisionUseCase(
+        repo,
+        makeCustomerRepo(),
+        makeEmailService(),
+        makeLogger(),
+      ).execute('OS-NOTFOUND', { decision: BudgetDecision.APPROVED }),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it('should propagate InvalidStatusTransitionException when order is not awaiting approval', async () => {
+    const repo = makeOrderRepo();
+    const order = makeOrder(ServiceOrderStatus.RECEIVED);
+    repo.findByOrderNumber.mockResolvedValue(order);
+
+    await expect(
+      new ProcessBudgetDecisionUseCase(
+        repo,
+        makeCustomerRepo(),
+        makeEmailService(),
+        makeLogger(),
+      ).execute('OS001', { decision: BudgetDecision.APPROVED }),
+    ).rejects.toThrow();
   });
 });
