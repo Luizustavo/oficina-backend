@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oficina-backend
+  namespace: oficina
+  labels:
+    app: oficina-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: oficina-backend
+  template:
+    metadata:
+      labels:
+        app: oficina-backend
+    spec:
+      containers:
+        - name: oficina-backend
+          image: REPLACE_WITH_ECR_IMAGE_URI:latest
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: oficina-backend-config
+            - secretRef:
+                name: oficina-backend-secret
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /api/health/ready
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/health/live
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
