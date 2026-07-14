@@ -2,27 +2,6 @@
 
 Sistema de gerenciamento de ordens de serviço para uma oficina mecânica, desenvolvido com **NestJS**, **Prisma**, **PostgreSQL** e arquitetura **Clean Architecture + DDD**.
 
-Na Fase 1 o sistema ganhou as funcionalidades centrais: cadastro de clientes/veículos, controle de peças e o fluxo completo de uma ordem de serviço. A Fase 2 evolui essa base em duas frentes — **qualidade e resiliência da aplicação** (novos endpoints, notificação por e-mail, testes) e **infraestrutura automatizada** (containerização, Kubernetes, Terraform, CI/CD) — para suportar múltiplas unidades e picos de demanda com escalabilidade real.
-
----
-
-## Objetivos desta fase
-
-- Reduzir risco operacional por meio de infraestrutura escalável (Kubernetes + autoscaling)
-- Automatizar o provisionamento (Terraform) e o deploy (CI/CD)
-- Evoluir a API com regras de negócio adicionais mantidas sob teste automatizado
-- Preparar a aplicação para picos de demanda com escalabilidade dinâmica (HPA)
-
-## O que mudou nesta fase
-
-- **Notificação por e-mail**: o cliente recebe um e-mail a cada mudança de status da sua OS (via [Resend](https://resend.com))
-- **Aprovação/recusa externa de orçamento**: endpoint público (`/service-orders/track/:orderNumber/budget-decision`) para um sistema externo aprovar ou recusar o orçamento sem precisar de login
-- **Listagem de OS com regras de negócio**: ordenação por prioridade de status (`Em Execução > Aguardando Aprovação > Diagnóstico > Recebida`, mais antigas primeiro) e exclusão lógica de OS finalizadas/entregues
-- **Containerização revisada** (Dockerfile multi-stage + docker-compose)
-- **Kubernetes** (`/k8s`): Deployment, Service, ConfigMap, Secret, Job de migração e HPA (2–6 réplicas, CPU/memória a 70%)
-- **Infraestrutura como código** (`/infra`): Terraform provisionando VPC, um nó Kubernetes (k3s numa EC2), RDS PostgreSQL, ECR e um alerta de orçamento
-- **CI/CD real**: pipeline builda, testa, publica a imagem Docker, roda a migração do banco e atualiza o cluster automaticamente
-
 ---
 
 ## Arquitetura
