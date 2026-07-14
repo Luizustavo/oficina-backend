@@ -2,6 +2,7 @@ import { ListServiceOrdersByCustomerUseCase } from '@application/use-cases/servi
 import { ListServiceOrdersByStatusUseCase } from '@application/use-cases/service-order/list-service-orders-by-status.use-case';
 import { GetAverageExecutionTimeUseCase } from '@application/use-cases/service-order/get-average-execution-time.use-case';
 import { ResendEmailNotificationService } from '@infrastructure/notification/resend-email-notification.service';
+import { ProcessBudgetDecisionUseCase } from '@application/use-cases/service-order/process-budget-decision.use-case';
 import { CreateServiceOrderUseCase } from '@application/use-cases/service-order/create-service-order.use-case';
 import { IEmailNotificationService } from '@domain/services/email-notification.service.interface';
 import { ListServiceOrdersUseCase } from '@application/use-cases/service-order/list-service-orders.use-case';
@@ -47,6 +48,7 @@ import { PartRepository } from '@infrastructure/database/prisma/repositories/par
     ApproveOrderUseCase,
     DeliverOrderUseCase,
     CancelOrderUseCase,
+    ProcessBudgetDecisionUseCase,
     { provide: IServiceOrderRepository, useClass: ServiceOrderRepository },
     { provide: ICustomerRepository, useClass: CustomerRepository },
     { provide: IVehicleRepository, useClass: VehicleRepository },
