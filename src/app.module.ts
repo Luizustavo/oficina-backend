@@ -8,11 +8,16 @@ import { JwtAuthGuard } from './infrastructure/presentation/guards/jwt-auth.guar
 import { PartsModule } from './infrastructure/presentation/modules/parts.module';
 import { AuthModule } from './infrastructure/presentation/modules/auth.module';
 import { RolesGuard } from './infrastructure/presentation/guards/roles.guard';
+import { loggingConfig } from './infrastructure/observability/logging.config';
+import { LoggerModule } from 'nestjs-pino';
 import { APP_GUARD } from '@nestjs/core';
 import { Module } from '@nestjs/common';
 
 @Module({
   imports: [
+    // Precisa ser o primeiro: registra o logger que todos os outros módulos
+    // vão usar através de `app.useLogger()` em main.ts.
+    LoggerModule.forRoot(loggingConfig()),
     ServiceOrdersModule,
     CustomersModule,
     VehiclesModule,

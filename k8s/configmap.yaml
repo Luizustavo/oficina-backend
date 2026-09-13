@@ -9,3 +9,10 @@ data:
   JWT_EXPIRES_IN: "15m"
   JWT_REFRESH_EXPIRES_IN: "7d"
   EMAIL_FROM: "onboarding@resend.dev"
+  # Observabilidade — OpenTelemetry exportando para o New Relic.
+  # Trocar de fornecedor é mudar estas duas linhas: a instrumentação é
+  # padrão aberto e não muda.
+  OTEL_ENABLED: "true"
+  OTEL_SERVICE_NAME: "oficina-backend"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "https://otlp.nr-data.net"
+  LOG_LEVEL: "info"

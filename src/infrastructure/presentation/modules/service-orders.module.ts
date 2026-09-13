@@ -26,6 +26,8 @@ import { IServiceRepository } from '@domain/repositories/service.repository.inte
 import { VehicleRepository } from '@infrastructure/database/prisma/repositories/vehicle.repository';
 import { ServiceRepository } from '@infrastructure/database/prisma/repositories/service.repository';
 import { IPartRepository } from '@domain/repositories/part.repository.interface';
+import { ServiceOrderMetrics } from '@infrastructure/observability/service-order.metrics';
+import { IntegrationMetrics } from '@infrastructure/observability/integration.metrics';
 import { Logger, Module } from '@nestjs/common';
 import { PartRepository } from '@infrastructure/database/prisma/repositories/part.repository';
 
@@ -33,6 +35,8 @@ import { PartRepository } from '@infrastructure/database/prisma/repositories/par
   controllers: [ServiceOrdersController],
   providers: [
     Logger,
+    ServiceOrderMetrics,
+    IntegrationMetrics,
     ListServiceOrdersByCustomerUseCase,
     ListServiceOrdersByStatusUseCase,
     GetAverageExecutionTimeUseCase,

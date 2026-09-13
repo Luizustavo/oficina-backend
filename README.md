@@ -72,6 +72,8 @@ Os passos 2–5 são automatizados pelo pipeline de CI/CD (`.github/workflows/cd
 | Orquestração | Kubernetes (k3s) |
 | Infraestrutura como código | Terraform |
 | CI/CD | GitHub Actions |
+| Observabilidade | OpenTelemetry → New Relic (traces, métricas e logs) |
+| Log estruturado | Pino (JSON, com correlação por trace) |
 | Documentação | Swagger / OpenAPI |
 | Testes | Jest (cobertura ≥ 80%) |
 
@@ -175,6 +177,24 @@ terraform apply
 ## CI/CD
 
 `.github/workflows/ci.yml` builda, testa (unitário/integração/e2e) e valida a imagem Docker em todo push/PR. `.github/workflows/cd-production.yml` faz o deploy de verdade em push para `main` (ou manualmente via **Actions → Deploy to Production → Run workflow**): publica a imagem no ECR, roda a migração e atualiza Deployment/Service/HPA no cluster — descobrindo o nó k3s dinamicamente por tag, sem depender de IP fixo ou de state local do Terraform.
+
+---
+
+## Observabilidade
+
+Instrumentação com **OpenTelemetry**, exportando para o **New Relic**. Por ser padrão aberto, trocar de fornecedor é mudar duas variáveis de ambiente, sem alterar código instrumentado.
+
+| Sinal | O que dá |
+|---|---|
+| Traces | Latência por rota e tempo de query no Postgres, automáticos |
+| Logs JSON | `trace_id`, `span_id` e `requestId` em toda linha, com senha/token/CPF censurados |
+| Métricas de negócio | Transições de ordem de serviço e tempo em cada status |
+| Métricas de integração | Falhas e latência das chamadas externas |
+| Infraestrutura | CPU e memória dos pods, via integração Kubernetes |
+
+Dos contadores de transição saem os três painéis exigidos pela Fase 3: volume diário de OS, tempo médio por status e erros de integração. Medir na transição, em vez de varrer a tabela na hora de montar o gráfico, é o que permite ver a oficina em tempo real.
+
+📖 **Consultas NRQL prontas dos dashboards, alertas e passo a passo de configuração em [`docs/observabilidade.md`](docs/observabilidade.md).**
 
 ---
 

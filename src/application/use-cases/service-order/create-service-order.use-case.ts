@@ -9,6 +9,7 @@ import { ICustomerRepository } from '@domain/repositories/customer.repository.in
 import { Injectable, Logger } from '@nestjs/common';
 import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
 import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
+import { ServiceOrderMetrics } from '@infrastructure/observability/service-order.metrics';
 import { ServiceOrderMapper } from '@application/mappers/service-order.mapper';
 import { randomUUID } from 'crypto';
 
@@ -27,6 +28,7 @@ export class CreateServiceOrderUseCase {
     private readonly orderRepository: IServiceOrderRepository,
     private readonly customerRepository: ICustomerRepository,
     private readonly vehicleRepository: IVehicleRepository,
+    private readonly metrics: ServiceOrderMetrics,
     private readonly logger: Logger,
   ) {}
 
@@ -75,6 +77,14 @@ export class CreateServiceOrderUseCase {
     );
 
     const created = await this.orderRepository.create(order);
+
+    // Sem `since`: a ordem acabou de nascer, não passou tempo em status
+    // anterior nenhum. É a soma deste contador, filtrada por
+    // to_status = RECEIVED, que vira o painel de volume diário de OS.
+    this.metrics.recordTransition({
+      fromStatus: 'NONE',
+      toStatus: created.status,
+    });
 
     this.logger.log(
       `Service order created successfully with ID: ${created.id}, order number: ${created.orderNumber}`,

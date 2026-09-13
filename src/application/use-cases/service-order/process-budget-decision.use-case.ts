@@ -7,6 +7,7 @@ import { IServiceOrderRepository } from '@domain/repositories/service-order.repo
 import { ServiceOrderResponseDto } from '@application/dtos/response/service-order.dto';
 import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
 import { Injectable, Logger } from '@nestjs/common';
+import { ServiceOrderMetrics } from '@infrastructure/observability/service-order.metrics';
 import { ServiceOrderMapper } from '@application/mappers/service-order.mapper';
 import { NotFoundException } from '@shared/exceptions/domain.exceptions';
 
@@ -16,6 +17,7 @@ export class ProcessBudgetDecisionUseCase {
     private readonly orderRepository: IServiceOrderRepository,
     private readonly customerRepository: ICustomerRepository,
     private readonly emailService: IEmailNotificationService,
+    private readonly metrics: ServiceOrderMetrics,
     private readonly logger: Logger,
   ) {}
 
@@ -35,12 +37,25 @@ export class ProcessBudgetDecisionUseCase {
       throw new NotFoundException('ServiceOrder', orderNumber);
     }
 
+    // Lidos antes da transição: `order` é mutado logo abaixo, e depois
+    // disso o status anterior não existe mais.
+    const previousStatus = order.status;
+    const previousStatusSince = order.updatedAt;
+
     if (dto.decision === BudgetDecision.APPROVED) {
       order.approve();
     } else {
       order.cancel();
     }
     const updated = await this.orderRepository.update(order);
+
+    // Este é o caminho pelo qual o próprio cliente decide o orçamento. Sem
+    // instrumentar aqui, toda aprovação vinda de fora sumiria do painel.
+    this.metrics.recordTransition({
+      fromStatus: previousStatus,
+      toStatus: updated.status,
+      since: previousStatusSince,
+    });
 
     const customer = await this.customerRepository.findById(updated.customerId);
     if (customer) {
