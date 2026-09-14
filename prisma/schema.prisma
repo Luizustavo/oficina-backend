@@ -60,6 +60,7 @@ model Vehicle {
   customer      Customer       @relation(fields: [customerId], references: [id])
   serviceOrders ServiceOrder[]
 
+  @@index([customerId])
   @@map("vehicles")
 }
 
@@ -72,6 +73,8 @@ model Service {
   isActive                 Boolean  @default(true)
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
+
+  serviceOrderServices ServiceOrderService[]
 
   @@map("services")
 }
@@ -88,6 +91,8 @@ model Part {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  serviceOrderParts ServiceOrderPart[]
+
   @@map("parts")
 }
 
@@ -98,8 +103,10 @@ model ServiceOrder {
   vehicleId          String
   problemDescription String
   status             ServiceOrderStatus @default(RECEIVED)
-  services           Json
-  parts              Json
+  // Agregado mantido na própria ordem: é a soma das duas tabelas filhas, mas
+  // também é o valor que o cliente aprovou. Recalculá-lo a cada leitura faria
+  // o total exibido mudar sozinho se o catálogo mudasse, e custaria um join
+  // com agregação em toda listagem.
   totalAmount        Decimal            @default(0) @db.Decimal(10, 2)
   notes              String?
   approvedAt         DateTime?
@@ -109,10 +116,71 @@ model ServiceOrder {
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
-  customer Customer @relation(fields: [customerId], references: [id])
-  vehicle  Vehicle  @relation(fields: [vehicleId], references: [id])
+  customer Customer              @relation(fields: [customerId], references: [id])
+  vehicle  Vehicle               @relation(fields: [vehicleId], references: [id])
+  services ServiceOrderService[]
+  parts    ServiceOrderPart[]
 
+  // O Postgres não cria índice em coluna de chave estrangeira automaticamente.
+  @@index([customerId])
+  @@index([vehicleId])
+  // Cobre tanto o filtro só por status quanto a ordenação por data dentro de
+  // cada status, que é como a listagem principal pagina.
+  @@index([status, createdAt])
+  @@index([createdAt])
   @@map("service_orders")
+}
+
+// Serviços de uma ordem. Antes era um campo Json, o que impedia integridade
+// referencial com o catálogo e qualquer consulta analítica sobre os itens.
+model ServiceOrderService {
+  id             String   @id @default(uuid())
+  serviceOrderId String
+  serviceId      String
+  // serviceName e price são cópias do catálogo no momento em que o item foi
+  // adicionado, de propósito: reajustar o preço de um serviço não pode alterar
+  // o valor de uma ordem que já foi orçada.
+  serviceName    String
+  price          Decimal  @db.Decimal(10, 2)
+  quantity       Int
+  notes          String?
+  // Preserva a ordem em que os itens foram adicionados. Sem isto a ordem de
+  // leitura fica indefinida, e a resposta da API mudaria entre requisições.
+  position       Int
+  createdAt      DateTime @default(now())
+
+  serviceOrder ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  service      Service      @relation(fields: [serviceId], references: [id])
+
+  @@unique([serviceOrderId, position])
+  @@index([serviceOrderId])
+  @@index([serviceId])
+  @@map("service_order_services")
+}
+
+// Peças de uma ordem. Mesma motivação da tabela de serviços.
+model ServiceOrderPart {
+  id             String   @id @default(uuid())
+  serviceOrderId String
+  partId         String
+  // Cópias do catálogo no momento da inclusão, pelo mesmo motivo dos serviços.
+  partName       String
+  partCode       String
+  unitPrice      Decimal  @db.Decimal(10, 2)
+  quantity       Int
+  // totalPrice não existe como coluna: era unitPrice * quantity, duas colunas
+  // da mesma linha. Guardar o produto abre espaço para os três valores se
+  // contradizerem. É calculado na leitura.
+  position       Int
+  createdAt      DateTime @default(now())
+
+  serviceOrder ServiceOrder @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  part         Part         @relation(fields: [partId], references: [id])
+
+  @@unique([serviceOrderId, position])
+  @@index([serviceOrderId])
+  @@index([partId])
+  @@map("service_order_parts")
 }
 
 model User {
@@ -139,5 +207,8 @@ model RefreshToken {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  // Usado pela limpeza periódica de tokens vencidos.
+  @@index([expiresAt])
   @@map("refresh_tokens")
 }

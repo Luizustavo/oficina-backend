@@ -183,6 +183,25 @@ A infraestrutura **não mora mais neste repositório**. Desde a Fase 3 ela está
 
 ---
 
+## Modelagem de dados
+
+PostgreSQL gerenciado (RDS). O domínio é relacional por natureza — cliente → veículo → ordem → itens — e aprovar um orçamento exige transação: muda status, congela o total e baixa estoque, tudo ou nada.
+
+Na Fase 3 os itens da ordem deixaram de ser dois campos `Json` e viraram **tabelas de junção com chave estrangeira**:
+
+```
+service_orders ──< service_order_services >── services
+               ──< service_order_parts    >── parts
+```
+
+O `Json` não dava integridade referencial (nada impedia apontar para um serviço inexistente, ou apagar do catálogo um serviço usado por dezenas de ordens), não permitia consulta analítica sobre os itens, e guardava dinheiro como ponto flutuante.
+
+Preços e nomes continuam copiados na tabela de junção de propósito: é um instantâneo do catálogo no momento do orçamento. Reajustar um serviço não pode mudar o valor de uma ordem já aprovada.
+
+📖 **Diagrama ER, explicação de cada relacionamento, justificativa do banco e detalhe dos índices em [`docs/modelagem-de-dados.md`](docs/modelagem-de-dados.md).**
+
+---
+
 ## Observabilidade
 
 Instrumentação com **OpenTelemetry**, exportando para o **New Relic**. Por ser padrão aberto, trocar de fornecedor é mudar duas variáveis de ambiente, sem alterar código instrumentado.

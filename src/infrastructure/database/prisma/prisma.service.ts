@@ -34,6 +34,12 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get serviceOrder() {
     return this.client.serviceOrder;
   }
+  get serviceOrderService() {
+    return this.client.serviceOrderService;
+  }
+  get serviceOrderPart() {
+    return this.client.serviceOrderPart;
+  }
   get user() {
     return this.client.user;
   }
@@ -64,6 +70,10 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     }
     const tableNames = [
       'refresh_tokens',
+      // Filhas antes das pais; o CASCADE do TRUNCATE já cobriria, mas ser
+      // explícito evita surpresa se o cascade mudar.
+      'service_order_services',
+      'service_order_parts',
       'service_orders',
       'vehicles',
       'customers',

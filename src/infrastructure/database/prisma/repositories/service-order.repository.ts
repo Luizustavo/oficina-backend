@@ -2,26 +2,44 @@ import {
   SERVICE_ORDER_LIST_EXCLUDED_STATUSES,
   SERVICE_ORDER_LIST_STATUS_PRIORITY,
 } from '@domain/validators/value-objects/service-order-status.value-object';
-import { ServiceOrder as PrismaServiceOrder } from '@generated/prisma/client';
-import { PrismaServiceOrderMapper } from '@infrastructure/database/prisma/mappers/prisma-service-order.mapper';
+import {
+  PrismaServiceOrderWithItems,
+  PrismaServiceOrderMapper,
+} from '@infrastructure/database/prisma/mappers/prisma-service-order.mapper';
 import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
 import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
 import { ServiceOrderStatus } from '@generated/prisma/enums';
 import { PrismaService } from '@infrastructure/database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
 
+// Itens sempre vêm junto: sem eles a entidade não consegue recalcular o
+// total nem responder pelo que foi orçado.
+const WITH_ITEMS = {
+  services: { orderBy: { position: 'asc' } },
+  parts: { orderBy: { position: 'asc' } },
+} as const;
+
 @Injectable()
 export class ServiceOrderRepository implements IServiceOrderRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(order: ServiceOrderEntity): Promise<ServiceOrderEntity> {
-    const data = PrismaServiceOrderMapper.toPrisma(order);
-    const created = await this.prisma.serviceOrder.create({ data });
+    const created = await this.prisma.serviceOrder.create({
+      data: {
+        ...PrismaServiceOrderMapper.toPrisma(order),
+        services: { create: PrismaServiceOrderMapper.toPrismaServices(order) },
+        parts: { create: PrismaServiceOrderMapper.toPrismaParts(order) },
+      },
+      include: WITH_ITEMS,
+    });
     return PrismaServiceOrderMapper.toEntity(created);
   }
 
   async findById(id: string): Promise<ServiceOrderEntity | null> {
-    const data = await this.prisma.serviceOrder.findUnique({ where: { id } });
+    const data = await this.prisma.serviceOrder.findUnique({
+      where: { id },
+      include: WITH_ITEMS,
+    });
     return data ? PrismaServiceOrderMapper.toEntity(data) : null;
   }
 
@@ -30,6 +48,7 @@ export class ServiceOrderRepository implements IServiceOrderRepository {
   ): Promise<ServiceOrderEntity | null> {
     const data = await this.prisma.serviceOrder.findUnique({
       where: { orderNumber },
+      include: WITH_ITEMS,
     });
 
     return data ? PrismaServiceOrderMapper.toEntity(data) : null;
@@ -39,6 +58,7 @@ export class ServiceOrderRepository implements IServiceOrderRepository {
     const records = await this.prisma.serviceOrder.findMany({
       where: { customerId },
       orderBy: { createdAt: 'desc' },
+      include: WITH_ITEMS,
     });
     return records.map((item) => PrismaServiceOrderMapper.toEntity(item));
   }
@@ -49,6 +69,7 @@ export class ServiceOrderRepository implements IServiceOrderRepository {
     const records = await this.prisma.serviceOrder.findMany({
       where: { status },
       orderBy: { createdAt: 'desc' },
+      include: WITH_ITEMS,
     });
     return records.map((item) => PrismaServiceOrderMapper.toEntity(item));
   }
@@ -66,6 +87,7 @@ export class ServiceOrderRepository implements IServiceOrderRepository {
           skip: params.skip ?? 0,
           take: params.take ?? 20,
           orderBy: { createdAt: 'desc' },
+          include: WITH_ITEMS,
         }),
         this.prisma.serviceOrder.count({ where }),
       ]);
@@ -87,7 +109,7 @@ export class ServiceOrderRepository implements IServiceOrderRepository {
   ): Promise<{ data: ServiceOrderEntity[]; total: number }> {
     let remainingSkip = skip;
     let remainingTake = take;
-    const records: PrismaServiceOrder[] = [];
+    const records: PrismaServiceOrderWithItems[] = [];
 
     for (const status of SERVICE_ORDER_LIST_STATUS_PRIORITY) {
       if (remainingTake <= 0) break;
@@ -105,6 +127,7 @@ export class ServiceOrderRepository implements IServiceOrderRepository {
         orderBy: { createdAt: 'asc' },
         skip: remainingSkip,
         take: remainingTake,
+        include: WITH_ITEMS,
       });
       records.push(...bucketRecords);
       remainingTake -= bucketRecords.length;
@@ -129,15 +152,30 @@ export class ServiceOrderRepository implements IServiceOrderRepository {
         finishedAt: { not: null },
       },
       orderBy: { finishedAt: 'desc' },
+      include: WITH_ITEMS,
     });
     return records.map((item) => PrismaServiceOrderMapper.toEntity(item));
   }
 
   async update(order: ServiceOrderEntity): Promise<ServiceOrderEntity> {
-    const data = PrismaServiceOrderMapper.toPrisma(order);
+    // A entidade trabalha com a lista inteira em memória, então a forma
+    // correta de persistir é trocar os filhos por completo. O Prisma executa
+    // o deleteMany e os creates aninhados numa única transação, então não
+    // existe instante em que a ordem fique sem itens.
     const updated = await this.prisma.serviceOrder.update({
-      where: { id: data.id },
-      data,
+      where: { id: order.id },
+      data: {
+        ...PrismaServiceOrderMapper.toPrisma(order),
+        services: {
+          deleteMany: {},
+          create: PrismaServiceOrderMapper.toPrismaServices(order),
+        },
+        parts: {
+          deleteMany: {},
+          create: PrismaServiceOrderMapper.toPrismaParts(order),
+        },
+      },
+      include: WITH_ITEMS,
     });
     return PrismaServiceOrderMapper.toEntity(updated);
   }
