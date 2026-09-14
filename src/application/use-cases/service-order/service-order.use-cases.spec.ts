@@ -24,6 +24,7 @@ import { ICustomerRepository } from '@domain/repositories/customer.repository.in
 import { CancelOrderUseCase } from './cancel-order.use-case';
 import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
 import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
+import { ServiceOrderMetrics } from '@infrastructure/observability/service-order.metrics';
 import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
 import { IPartRepository } from '@domain/repositories/part.repository.interface';
 import { BudgetDecision } from '@application/dtos/request/service-order.dto';
@@ -65,6 +66,11 @@ const makePartRepo = (): jest.Mocked<
   findById: jest.fn(),
   update: jest.fn(),
 });
+
+const makeMetrics = (): jest.Mocked<ServiceOrderMetrics> =>
+  ({
+    recordTransition: jest.fn(),
+  }) as unknown as jest.Mocked<ServiceOrderMetrics>;
 
 const makeLogger = (): jest.Mocked<Logger> =>
   ({
@@ -118,6 +124,7 @@ describe('StartDiagnosisUseCase', () => {
       repo,
       customerRepo,
       emailService,
+      makeMetrics(),
       makeLogger(),
     ).execute('so-1');
     expect(result.status).toBe(ServiceOrderStatus.IN_DIAGNOSIS);
@@ -142,6 +149,7 @@ describe('StartDiagnosisUseCase', () => {
       repo,
       customerRepo,
       emailService,
+      makeMetrics(),
       makeLogger(),
     ).execute('so-1');
     expect(result.status).toBe(ServiceOrderStatus.IN_DIAGNOSIS);
@@ -156,6 +164,7 @@ describe('StartDiagnosisUseCase', () => {
         repo,
         makeCustomerRepo(),
         makeEmailService(),
+        makeMetrics(),
         makeLogger(),
       ).execute('missing'),
     ).rejects.toThrow(NotFoundException);
@@ -175,6 +184,7 @@ describe('CancelOrderUseCase', () => {
       repo,
       customerRepo,
       makeEmailService(),
+      makeMetrics(),
       makeLogger(),
     ).execute('so-1');
     expect(result.status).toBe(ServiceOrderStatus.CANCELED);
@@ -189,6 +199,7 @@ describe('CancelOrderUseCase', () => {
         repo,
         makeCustomerRepo(),
         makeEmailService(),
+        makeMetrics(),
         makeLogger(),
       ).execute('so-1'),
     ).rejects.toThrow();
@@ -267,6 +278,7 @@ describe('RequestApprovalUseCase', () => {
       repo,
       customerRepo,
       makeEmailService(),
+      makeMetrics(),
       makeLogger(),
     ).execute('so-1');
     expect(result.status).toBe(ServiceOrderStatus.AWAITING_APPROVAL);
@@ -280,6 +292,7 @@ describe('RequestApprovalUseCase', () => {
         repo,
         makeCustomerRepo(),
         makeEmailService(),
+        makeMetrics(),
         makeLogger(),
       ).execute('missing'),
     ).rejects.toThrow(NotFoundException);
@@ -299,6 +312,7 @@ describe('ApproveOrderUseCase', () => {
       repo,
       customerRepo,
       makeEmailService(),
+      makeMetrics(),
       makeLogger(),
     ).execute('so-1');
     expect(result.status).toBe(ServiceOrderStatus.IN_PROGRESS);
@@ -312,6 +326,7 @@ describe('ApproveOrderUseCase', () => {
         repo,
         makeCustomerRepo(),
         makeEmailService(),
+        makeMetrics(),
         makeLogger(),
       ).execute('missing'),
     ).rejects.toThrow(NotFoundException);
@@ -383,6 +398,7 @@ describe('CompleteOrderUseCase → DeliverOrderUseCase pipeline', () => {
       repo,
       customerRepo,
       makeEmailService(),
+      makeMetrics(),
       makeLogger(),
     ).execute('so-1');
     expect(completed.status).toBe(ServiceOrderStatus.COMPLETED);
@@ -392,6 +408,7 @@ describe('CompleteOrderUseCase → DeliverOrderUseCase pipeline', () => {
       repo,
       customerRepo,
       makeEmailService(),
+      makeMetrics(),
       makeLogger(),
     ).execute('so-1');
     expect(delivered.status).toBe(ServiceOrderStatus.DELIVERED);
@@ -410,6 +427,7 @@ describe('CreateServiceOrderUseCase', () => {
       orderRepo,
       customerRepo,
       vehicleRepo,
+      makeMetrics(),
       makeLogger(),
     );
     await expect(
@@ -434,6 +452,7 @@ describe('CreateServiceOrderUseCase', () => {
       orderRepo,
       customerRepo,
       vehicleRepo,
+      makeMetrics(),
       makeLogger(),
     );
     await expect(
@@ -573,6 +592,7 @@ describe('ProcessBudgetDecisionUseCase', () => {
       repo,
       customerRepo,
       emailService,
+      makeMetrics(),
       makeLogger(),
     ).execute('OS001', { decision: BudgetDecision.APPROVED });
 
@@ -597,6 +617,7 @@ describe('ProcessBudgetDecisionUseCase', () => {
       repo,
       customerRepo,
       makeEmailService(),
+      makeMetrics(),
       makeLogger(),
     ).execute('OS001', { decision: BudgetDecision.REJECTED });
 
@@ -612,6 +633,7 @@ describe('ProcessBudgetDecisionUseCase', () => {
         repo,
         makeCustomerRepo(),
         makeEmailService(),
+        makeMetrics(),
         makeLogger(),
       ).execute('OS-NOTFOUND', { decision: BudgetDecision.APPROVED }),
     ).rejects.toThrow(NotFoundException);
@@ -627,6 +649,7 @@ describe('ProcessBudgetDecisionUseCase', () => {
         repo,
         makeCustomerRepo(),
         makeEmailService(),
+        makeMetrics(),
         makeLogger(),
       ).execute('OS001', { decision: BudgetDecision.APPROVED }),
     ).rejects.toThrow();

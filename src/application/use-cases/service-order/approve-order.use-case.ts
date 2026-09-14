@@ -3,6 +3,7 @@ import { IServiceOrderRepository } from '@domain/repositories/service-order.repo
 import { ServiceOrderResponseDto } from '@application/dtos/response/service-order.dto';
 import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
 import { Injectable, Logger } from '@nestjs/common';
+import { ServiceOrderMetrics } from '@infrastructure/observability/service-order.metrics';
 import { ServiceOrderMapper } from '@application/mappers/service-order.mapper';
 import { NotFoundException } from '@shared/exceptions/domain.exceptions';
 
@@ -12,6 +13,7 @@ export class ApproveOrderUseCase {
     private readonly orderRepository: IServiceOrderRepository,
     private readonly customerRepository: ICustomerRepository,
     private readonly emailService: IEmailNotificationService,
+    private readonly metrics: ServiceOrderMetrics,
     private readonly logger: Logger,
   ) {}
 
@@ -24,8 +26,19 @@ export class ApproveOrderUseCase {
       throw new NotFoundException('ServiceOrder', id);
     }
 
+    // Lidos antes da transição: `order` é mutado por `approve()`,
+    // e depois disso o status anterior não existe mais.
+    const previousStatus = order.status;
+    const previousStatusSince = order.updatedAt;
+
     order.approve();
     const updated = await this.orderRepository.update(order);
+
+    this.metrics.recordTransition({
+      fromStatus: previousStatus,
+      toStatus: updated.status,
+      since: previousStatusSince,
+    });
 
     const customer = await this.customerRepository.findById(updated.customerId);
     if (customer) {
