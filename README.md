@@ -40,7 +40,7 @@ src/
 | Registro de imagens | ECR | Guarda a imagem Docker publicada pelo CI/CD |
 | Alerta de custo | AWS Budgets | Avisa por e-mail se o gasto do mês passar de 50%/100% do limite |
 
-k3s (Kubernetes leve, mas 100% real) roda numa única EC2 em vez de usar EKS gerenciado — o control plane do EKS cobra taxa fixa por hora sem free tier, enquanto a EC2 e o RDS escolhidos são elegíveis ao free tier de conta nova. Isso mantém o custo em ~US$0,04–0,07/hora em vez de ~US$0,37/hora. Detalhes e justificativa completa em [`infra/README.md`](infra/README.md).
+k3s (Kubernetes leve, mas 100% real) roda numa única EC2 em vez de usar EKS gerenciado — o control plane do EKS cobra taxa fixa por hora sem free tier, enquanto a EC2 e o RDS escolhidos são elegíveis ao free tier de conta nova. Isso mantém o custo em ~US$0,04–0,07/hora em vez de ~US$0,37/hora. Detalhes e justificativa completa no repositório [`oficina-infra-k8s`](https://github.com/Luizustavo/oficina-infra-k8s).
 
 ### Fluxo de deploy
 
@@ -161,16 +161,19 @@ kubectl apply -f k8s/secret.yaml
 
 ## Provisionamento da infraestrutura (Terraform)
 
-Scripts completos em [`/infra`](infra), com instruções detalhadas, tabela de recursos e estimativa de custo em [`infra/README.md`](infra/README.md).
+A infraestrutura **não mora mais neste repositório**. Desde a Fase 3 ela está dividida em repositórios próprios, cada um com o seu pipeline de CI/CD e o state remoto no S3:
 
-```bash
-cd infra
-terraform init
-terraform plan
-terraform apply
-```
+| Repositório | O que provisiona |
+|---|---|
+| [`oficina-infra-k8s`](https://github.com/Luizustavo/oficina-infra-k8s) | VPC, subnets, EC2 com k3s, ECR e alerta de orçamento |
+| [`oficina-infra-database`](https://github.com/Luizustavo/oficina-infra-database) | RDS PostgreSQL, subnet group e security group |
+| [`oficina-lambda-auth`](https://github.com/Luizustavo/oficina-lambda-auth) | Lambda de autenticação por CPF e API Gateway |
 
-**Importante:** a infraestrutura é destruída (`terraform destroy`) ao final de cada sessão de trabalho para controlar custo — veja o checklist em `infra/README.md`.
+**Ordem de apply:** `oficina-infra-k8s` → `oficina-infra-database` → `oficina-lambda-auth`. O repositório do banco lê a rede do primeiro via `terraform_remote_state`, então ele precisa existir antes.
+
+**Ordem de destroy: exatamente a inversa.**
+
+**Importante:** a infraestrutura é destruída ao final de cada sessão de trabalho para controlar custo — veja o checklist no README de cada repositório.
 
 ## CI/CD
 
@@ -182,7 +185,7 @@ terraform apply
 
 - **Collection completa (OpenAPI, importável no Postman/Insomnia)**: [`docs/openapi.json`](docs/openapi.json) — veja [`docs/openapi.md`](docs/openapi.md) para instruções de importação. Versionada no repositório, não depende da infraestrutura estar no ar.
 - **Swagger local**: http://localhost:3000/api/docs
-- **Swagger ao vivo**: disponível enquanto a infraestrutura estiver provisionada (veja `infra/README.md`) — pode não responder se a infra tiver sido destruída no momento do acesso
+- **Swagger ao vivo**: disponível enquanto a infraestrutura estiver provisionada (veja [`oficina-infra-k8s`](https://github.com/Luizustavo/oficina-infra-k8s)) — pode não responder se a infra tiver sido destruída no momento do acesso
 
 ## Vídeo demonstrativo
 
