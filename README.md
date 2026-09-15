@@ -19,7 +19,8 @@ Este é o repositório da **aplicação**. A infraestrutura vive em três reposi
 | **Swagger** | https://dzsca8yk0b.execute-api.sa-east-1.amazonaws.com/api/docs |
 | **OpenAPI (JSON)** | https://dzsca8yk0b.execute-api.sa-east-1.amazonaws.com/api/docs-json |
 | **Healthcheck** | https://dzsca8yk0b.execute-api.sa-east-1.amazonaws.com/api/health/live |
-| **Dashboards** | [New Relic — Tech Challenge Fase 3](https://one.newrelic.com/dashboards/detail/ODUxNTY3NnxWSVp8REFTSEJPQVJEfGRhOjEzMTc2NzI5) |
+| **Dashboards** | [New Relic — Tech Challenge Fase 3](https://one.newrelic.com/dashboards/detail/ODUxNTY3NnxWSVp8REFTSEJPQVJEfGRhOjEzMTc2NzI5) — 20 widgets em 2 páginas |
+| **Alertas** | Política `Oficina — Tech Challenge Fase 3`, 5 condições ativas ([detalhes](docs/observabilidade.md#alertas)) |
 
 > A infraestrutura é destruída ao final de cada sessão de trabalho para não consumir crédito (ver [ADR-001](docs/adr/adr-001-k3s-em-ec2-no-lugar-do-eks.md)). Enquanto estiver fora, os endereços acima não respondem, e o identificador do API Gateway muda a cada novo `apply`. Para obter o endereço atual:
 >
