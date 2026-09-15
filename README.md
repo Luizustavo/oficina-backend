@@ -1,6 +1,33 @@
-# Oficina Backend — Tech Challenge SOAT Fase 2
+# Oficina Backend — Tech Challenge SOAT Fase 3
 
 Sistema de gerenciamento de ordens de serviço para uma oficina mecânica, desenvolvido com **NestJS**, **Prisma**, **PostgreSQL** e arquitetura **Clean Architecture + DDD**.
+
+Este é o repositório da **aplicação**. A infraestrutura vive em três repositórios próprios, cada um com o seu CI/CD:
+
+| Repositório | Conteúdo |
+|---|---|
+| **oficina-backend** (este) | Aplicação NestJS, manifestos Kubernetes, documentação arquitetural |
+| [oficina-infra-k8s](https://github.com/Luizustavo/oficina-infra-k8s) | VPC, EC2 com k3s, ECR, alerta de orçamento |
+| [oficina-infra-database](https://github.com/Luizustavo/oficina-infra-database) | RDS PostgreSQL |
+| [oficina-lambda-auth](https://github.com/Luizustavo/oficina-lambda-auth) | Lambda de autenticação por CPF e API Gateway |
+
+## Deploy ativo
+
+| Recurso | Endereço |
+|---|---|
+| **API (porta de entrada)** | `https://dzsca8yk0b.execute-api.sa-east-1.amazonaws.com` — a raiz responde **401** de propósito: toda rota não pública exige token, barrado já no API Gateway |
+| **Swagger** | https://dzsca8yk0b.execute-api.sa-east-1.amazonaws.com/api/docs |
+| **OpenAPI (JSON)** | https://dzsca8yk0b.execute-api.sa-east-1.amazonaws.com/api/docs-json |
+| **Healthcheck** | https://dzsca8yk0b.execute-api.sa-east-1.amazonaws.com/api/health/live |
+| **Dashboards** | [New Relic — Tech Challenge Fase 3](https://one.newrelic.com/dashboards/detail/ODUxNTY3NnxWSVp8REFTSEJPQVJEfGRhOjEzMTc2NzI5) |
+
+> A infraestrutura é destruída ao final de cada sessão de trabalho para não consumir crédito (ver [ADR-001](docs/adr/adr-001-k3s-em-ec2-no-lugar-do-eks.md)). Enquanto estiver fora, os endereços acima não respondem, e o identificador do API Gateway muda a cada novo `apply`. Para obter o endereço atual:
+>
+> ```bash
+> terraform -chdir=infra output -raw api_gateway_url   # no repositório oficina-lambda-auth
+> ```
+>
+> O vídeo de demonstração mostra o ambiente no ar.
 
 ---
 
@@ -54,9 +81,53 @@ k3s (Kubernetes leve, mas 100% real) roda numa única EC2 em vez de usar EKS ger
 
 Os passos 2–5 são automatizados pelo pipeline de CI/CD (`.github/workflows/cd-production.yml`) a cada push em `main`.
 
-### Diagrama visual
+### Diagrama da arquitetura
 
-📐 **[Diagrama de instalação completo](https://claude.ai/code/artifact/e646173e-e40c-4913-a41a-048c2f865e57)** — topologia da rede, lista de componentes e fluxo de deploy.
+Como uma requisição atravessa as camadas, e onde cada regra mora:
+
+```mermaid
+flowchart TB
+    REQ["Requisição HTTP<br/>vinda do API Gateway"]
+
+    subgraph INFRA["infrastructure — moldura"]
+        direction TB
+        GUARD["Guards globais<br/>JwtAuthGuard · RolesGuard · CustomerScopeGuard"]
+        CTRL["Controller<br/>+ ValidationPipe"]
+        REPO["Repositório Prisma<br/>+ PrismaMapper"]
+        FILTER["HttpExceptionFilter<br/>exceção de domínio → status HTTP"]
+    end
+
+    subgraph APP["application — orquestração"]
+        UC["Caso de uso<br/>um por arquivo"]
+        MAP["ApplicationMapper<br/>DTO ↔ Entidade"]
+    end
+
+    subgraph DOM["domain — regra de negócio pura"]
+        ENT["Entidade rica<br/>ServiceOrder · Customer · Vehicle"]
+        VO["Value objects<br/>CPF · CNPJ · Placa · StatusVO"]
+        PORT["Portas abstratas<br/>IXxxRepository · IEmailNotificationService"]
+    end
+
+    DB[("PostgreSQL")]
+
+    REQ --> GUARD --> CTRL --> UC
+    UC --> PORT
+    UC --> ENT
+    ENT --> VO
+    UC --> MAP
+    PORT -.->|"implementada por"| REPO
+    REPO --> DB
+    UC -.->|"lança exceção de domínio"| FILTER
+    FILTER --> REQ
+
+    style DOM fill:#eef7ee,stroke:#4a4
+    style APP fill:#eef2fa,stroke:#46a
+    style INFRA fill:#faf6ee,stroke:#a84
+```
+
+A seta tracejada de `PORT` para `REPO` é a inversão de dependência: o domínio declara a porta como classe abstrata, e a infraestrutura a implementa. Nenhum arquivo em `domain/` importa NestJS ou Prisma.
+
+Diagrama de componentes com a visão de nuvem, diagramas de sequência e o diagrama ER estão em [`docs/`](docs/README.md).
 
 ---
 
@@ -238,7 +309,8 @@ Dos contadores de transição saem os três painéis exigidos pela Fase 3: volum
 ## Documentação da API
 
 - **Collection completa (OpenAPI, importável no Postman/Insomnia)**: [`docs/openapi.json`](docs/openapi.json) — veja [`docs/openapi.md`](docs/openapi.md) para instruções de importação. Versionada no repositório, não depende da infraestrutura estar no ar.
-- **Swagger local**: http://localhost:3000/api/docs
+- **Swagger ao vivo**: https://dzsca8yk0b.execute-api.sa-east-1.amazonaws.com/api/docs — enquanto a infraestrutura estiver provisionada
+- **Swagger local**: http://localhost:3000/api/docs (com `npm run start:dev`)
 - **Swagger ao vivo**: disponível enquanto a infraestrutura estiver provisionada (veja [`oficina-infra-k8s`](https://github.com/Luizustavo/oficina-infra-k8s)) — pode não responder se a infra tiver sido destruída no momento do acesso
 
 ## Vídeo demonstrativo
