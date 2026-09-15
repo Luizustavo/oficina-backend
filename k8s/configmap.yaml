@@ -16,3 +16,6 @@ data:
   OTEL_SERVICE_NAME: "oficina-backend"
   OTEL_EXPORTER_OTLP_ENDPOINT: "https://otlp.nr-data.net"
   LOG_LEVEL: "info"
+  # Redundante com o que tracing.ts já define, de propósito: permite corrigir
+  # a temporalidade sem rebuildar a imagem, se algum dia o padrão mudar.
+  OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE: "delta"

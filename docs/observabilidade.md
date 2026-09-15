@@ -76,6 +76,18 @@ helm upgrade --install newrelic-bundle newrelic/nri-bundle \
 
 > **Atenção ao tamanho do nó.** O cluster é um k3s de nó único numa `t3.small` (2 GB). O `nri-bundle` completo pode apertar a memória disponível para os pods da aplicação. Se o nó ficar sob pressão, desligue os componentes que não são necessários para a entrega (`--set newrelic-logging.enabled=false`, já que os logs vão por OTLP direto da aplicação).
 
+### Temporalidade das métricas
+
+O exportador é configurado com temporalidade **delta**, e não com o padrão **cumulativa**:
+
+```ts
+temporalityPreference: AggregationTemporalityPreference.DELTA
+```
+
+Não é detalhe de afinação. Com temporalidade cumulativa, cada contador reporta o total acumulado desde o início do processo, e cabe ao New Relic derivar o incremento entre pontos consecutivos. O primeiro ponto de cada série não tem antecessor, então o valor dele se perde.
+
+O efeito foi medido: seis ordens criadas apareciam como **três**, e três entregas como **nenhuma**. Com um Deployment de várias réplicas o erro se multiplica, porque cada pod inicia a própria série. Depois da troca para delta, uma medição controlada de quatro criações e duas entregas devolveu exatamente `4` e `2`.
+
 ---
 
 ## Dashboards
@@ -141,7 +153,7 @@ TIMESERIES
 Latência das APIs:
 
 ```sql
-SELECT average(duration), percentile(duration, 95, 99)
+SELECT average(`duration.ms`), percentile(`duration.ms`, 95, 99)
 FROM Span
 WHERE service.name = 'oficina-backend' AND span.kind = 'server'
 FACET name
@@ -170,7 +182,11 @@ SINCE 1 hour ago
 TIMESERIES
 ```
 
-> Os nomes exatos das métricas podem variar conforme a versão do exportador. Confirme em **New Relic → Data Explorer → Metrics**, filtrando por `service_order` e `integration`, antes de salvar o dashboard.
+> **Duas armadilhas confirmadas na prática**, ao montar o dashboard contra dados reais:
+>
+> **O campo de duração do span é `duration.ms`, não `duration`.** Em spans vindos por OTLP, `duration` chega nulo, e `percentile(duration, 95)` devolve `0` sem erro nenhum — um painel silenciosamente errado. `duration.ms` já está em milissegundos, então não multiplique por 1000.
+>
+> **Janelas maiores que ~2 dias não enxergam dado recente.** O New Relic responde consultas longas a partir de tabelas de rollup agregadas por hora e por dia; dado ingerido há minutos ainda não foi agregado e some do resultado. `SINCE 7 days ago` retornava vazio enquanto `SINCE 2 days ago` retornava cinco facetas, com exatamente os mesmos dados. Para demonstração, use janelas curtas.
 
 ---
 
@@ -195,12 +211,12 @@ Dispara com **mais de 3 ocorrências em 5 minutos**.
 ### Latência degradada
 
 ```sql
-SELECT percentile(duration, 95)
+SELECT percentile(`duration.ms`, 95)
 FROM Span
 WHERE service.name = 'oficina-backend' AND span.kind = 'server'
 ```
 
-Dispara acima de **2 segundos por 5 minutos**.
+Dispara acima de **2000** (2 segundos, em milissegundos).
 
 ### Aplicação fora do ar
 
