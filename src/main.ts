@@ -9,6 +9,7 @@ import { startTracing } from './infrastructure/observability/tracing';
 startTracing();
 
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { addLambdaAuthPath } from './infrastructure/presentation/swagger/lambda-auth.path';
 import { HttpExceptionFilter } from './infrastructure/presentation/filters/http-exception.filter';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -41,14 +42,34 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Oficina Backend API')
     .setDescription(
-      'Mechanical Workshop Management System - Tech Challenge SOAT Fase 1',
+      'Sistema de gestão de ordens de serviço de uma oficina mecânica — ' +
+        'Tech Challenge SOAT Fase 3.\n\n' +
+        '**Dois caminhos de autenticação, para dois públicos:**\n\n' +
+        '- **Cliente da oficina** — `POST /auth/cpf`, atendida por uma função ' +
+        'serverless. Identifica-se só pelo CPF, não tem senha. O token que ela ' +
+        'devolve dá acesso apenas aos dados do próprio cliente.\n' +
+        '- **Funcionário** — `POST /api/auth/login`, com e-mail e senha, e um ' +
+        'papel (`ADMIN`, `MECHANIC` ou `ATTENDANT`).\n\n' +
+        'Use o botão **Authorize** acima para colar o `accessToken` de qualquer ' +
+        'um dos dois e experimentar as rotas protegidas.',
     )
     .setVersion('1.0')
     .addBearerAuth()
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  const document = addLambdaAuthPath(SwaggerModule.createDocument(app, config));
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: {
+      // Mantém o token depois de recarregar a página — sem isto, toda
+      // atualização obriga a autenticar de novo, o que atrapalha tanto o uso
+      // real quanto uma demonstração ao vivo.
+      persistAuthorization: true,
+      docExpansion: 'none',
+      filter: true,
+      tagsSorter: 'alpha',
+    },
+    customSiteTitle: 'Oficina Backend API — Fase 3',
+  });
 
   app.enableShutdownHooks();
 
