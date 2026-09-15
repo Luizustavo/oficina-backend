@@ -61,7 +61,7 @@ Sem `NEW_RELIC_LICENSE_KEY`, a telemetria fica desligada e a aplicação roda no
 
 ### Métricas de infraestrutura do Kubernetes
 
-CPU e memória dos pods vêm da integração Kubernetes do New Relic, instalada no cluster:
+CPU e memória dos pods vêm da integração Kubernetes do New Relic, **já instalada no cluster** (release Helm `newrelic-bundle`, namespace `newrelic`):
 
 ```bash
 helm repo add newrelic https://helm-charts.newrelic.com
@@ -69,12 +69,20 @@ helm upgrade --install newrelic-bundle newrelic/nri-bundle \
   --namespace newrelic --create-namespace \
   --set global.licenseKey="$NEW_RELIC_LICENSE_KEY" \
   --set global.cluster=oficina-k3s \
-  --set kube-state-metrics.enabled=true \
+  --set global.lowDataMode=true \
+  --set newrelic-infrastructure.enabled=true \
   --set newrelic-infrastructure.privileged=true \
-  --set nodeSelector."kubernetes\.io/os"=linux
+  --set kube-state-metrics.enabled=true \
+  --set newrelic-logging.enabled=false \
+  --set nri-prometheus.enabled=false \
+  --set nri-metadata-injection.enabled=false \
+  --set nri-kube-events.enabled=false \
+  --set newrelic-infrastructure.kubelet.resources.limits.memory=200Mi
 ```
 
-> **Atenção ao tamanho do nó.** O cluster é um k3s de nó único numa `t3.small` (2 GB). O `nri-bundle` completo pode apertar a memória disponível para os pods da aplicação. Se o nó ficar sob pressão, desligue os componentes que não são necessários para a entrega (`--set newrelic-logging.enabled=false`, já que os logs vão por OTLP direto da aplicação).
+> **Instalação enxuta, por causa do tamanho do nó.** O cluster é um k3s de nó único numa `t3.small` (2 GB). O `nri-bundle` completo apertaria a memória dos pods da aplicação, então logging, Prometheus, injeção de metadados e eventos ficam **desligados**: os logs já vão por OTLP direto da aplicação, e os demais não são exigidos pela fase.
+>
+> Medido antes e depois: o nó saiu de 1097 MiB para 1118 MiB de uso, os dois pods da aplicação seguiram `Running` sem reinício, e nenhum pod foi despejado. As métricas confirmadas no New Relic: `cpuUsedCores` e `memoryWorkingSetBytes` por pod.
 
 ### Temporalidade das métricas
 
@@ -192,7 +200,19 @@ TIMESERIES
 
 ## Alertas
 
-Crie em **Alerts → Alert conditions → NRQL**.
+**Provisionados e ativos** na política `Oficina — Tech Challenge Fase 3` (id `8053682`), criada via NerdGraph. As cinco condições abaixo já existem na conta — não são receita a seguir.
+
+| Condição | Dispara quando | Prioridade |
+|---|---|---|
+| Falha no processamento de ordens de serviço | mais de 3 erros em rotas de OS por 5 min | crítico |
+| Latência degradada | p95 acima de 2000 ms por 5 min | crítico |
+| Aplicação sem tráfego | nenhum span por 5 min | crítico |
+| Integração externa degradada | acima de 20% de falha por 10 min | aviso |
+| Ordens presas em diagnóstico | média acima de 48h no status | aviso |
+
+> Falta associar um **canal de notificação** (e-mail ou Slack) à política. Sem canal, as condições disparam e registram incidente no New Relic, mas ninguém é avisado fora dele. Em *Alerts → Destinations*.
+
+Para recriar em outra conta:
 
 ### Falha no processamento de ordens de serviço
 
