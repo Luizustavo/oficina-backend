@@ -80,9 +80,7 @@ jobs:
       - run: npm ci
       - run: npx prisma generate
       - run: npx prisma migrate deploy
-      # --passWithNoTests: this repo has no *.integration-spec.ts files yet;
-      # remove the flag once integration tests are added.
-      - run: npm run test:int -- --passWithNoTests
+      - run: npm run test:int
 
   e2e-tests:
     name: E2E Tests
