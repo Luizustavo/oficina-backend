@@ -1,3 +1,4 @@
+import { CustomerScope } from '@infrastructure/presentation/decorators/customer-scope.decorator';
 import {
   Controller,
   Delete,
@@ -48,6 +49,7 @@ export class VehiclesController {
     });
   }
 
+  @CustomerScope({ param: 'customerId' })
   @Get('customer/:customerId')
   @ApiOperation({ summary: 'List vehicles by customer' })
   async listByCustomerHandler(@Param('customerId') customerId: string) {

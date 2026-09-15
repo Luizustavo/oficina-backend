@@ -7,6 +7,7 @@ import { PrismaModule } from './infrastructure/database/prisma/prisma.module';
 import { JwtAuthGuard } from './infrastructure/presentation/guards/jwt-auth.guard';
 import { PartsModule } from './infrastructure/presentation/modules/parts.module';
 import { AuthModule } from './infrastructure/presentation/modules/auth.module';
+import { CustomerScopeGuard } from './infrastructure/presentation/guards/customer-scope.guard';
 import { RolesGuard } from './infrastructure/presentation/guards/roles.guard';
 import { loggingConfig } from './infrastructure/observability/logging.config';
 import { LoggerModule } from 'nestjs-pino';
@@ -30,6 +31,9 @@ import { Module } from '@nestjs/common';
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    // Depois do RolesGuard de propósito: aquele decide o que funcionário
+    // pode; este restringe cliente aos próprios dados, negando por padrão.
+    { provide: APP_GUARD, useClass: CustomerScopeGuard },
   ],
 })
 export class AppModule {}
