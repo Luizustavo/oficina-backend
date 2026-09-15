@@ -220,6 +220,21 @@ Dos contadores de transição saem os três painéis exigidos pela Fase 3: volum
 
 ---
 
+## Documentação da arquitetura
+
+| Documento | Conteúdo |
+|---|---|
+| [Diagrama de componentes](docs/arquitetura/diagrama-de-componentes.md) | Visão de nuvem: entrada, computação, dados, observabilidade e entrega |
+| [Diagramas de sequência](docs/arquitetura/diagramas-de-sequencia.md) | Autenticação por CPF, abertura de ordem, transição de status e máquina de estados |
+| [Modelagem de dados](docs/modelagem-de-dados.md) | Diagrama ER, relacionamentos, justificativa do banco e índices |
+| [Observabilidade](docs/observabilidade.md) | Instrumentação, consultas NRQL dos dashboards e alertas |
+| [RFCs](docs/rfc/) | Escolha da nuvem, do banco e da estratégia de autenticação |
+| [ADRs](docs/adr/) | Oito decisões arquiteturais permanentes |
+
+Índice completo em [`docs/`](docs/README.md).
+
+---
+
 ## Documentação da API
 
 - **Collection completa (OpenAPI, importável no Postman/Insomnia)**: [`docs/openapi.json`](docs/openapi.json) — veja [`docs/openapi.md`](docs/openapi.md) para instruções de importação. Versionada no repositório, não depende da infraestrutura estar no ar.
