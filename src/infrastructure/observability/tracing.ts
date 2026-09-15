@@ -9,7 +9,10 @@ import {
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
-import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-http';
+import {
+  AggregationTemporalityPreference,
+  OTLPMetricExporter,
+} from '@opentelemetry/exporter-metrics-otlp-http';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';
 import { otelConfig } from '@infrastructure/config/otel.config';
@@ -53,6 +56,14 @@ export function startTracing(): void {
         exporter: new OTLPMetricExporter({
           url: `${endpoint}/v1/metrics`,
           headers,
+          // DELTA, e não o padrão CUMULATIVE. Com temporalidade cumulativa o
+          // New Relic precisa derivar o delta entre pontos consecutivos, e o
+          // primeiro ponto de cada série não tem antecessor — o valor dele se
+          // perde. Na prática os contadores de negócio chegavam pela metade:
+          // seis ordens criadas apareciam como três, e três entregas como
+          // nenhuma. Com um Deployment de várias réplicas o erro se multiplica,
+          // porque cada pod inicia a própria série.
+          temporalityPreference: AggregationTemporalityPreference.DELTA,
         }),
         // 30s mantém o volume de ingestão baixo e ainda dá granularidade
         // suficiente para os dashboards.
