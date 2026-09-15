@@ -14,6 +14,7 @@ import { CreateUserUseCase } from '@application/use-cases/auth/create-user.use-c
 import { ListUsersUseCase } from '@application/use-cases/auth/list-users.use-case';
 import { LoginUseCase } from '@application/use-cases/auth/login.use-case';
 import { UserRole } from '@domain/enums/user-role.enum';
+import { CustomerScope } from '@infrastructure/presentation/decorators/customer-scope.decorator';
 import { Public } from '@infrastructure/presentation/decorators/public.decorator';
 import { Roles } from '@infrastructure/presentation/decorators/roles.decorator';
 
@@ -57,6 +58,7 @@ export class AuthController {
     return this.listUsersUseCase.execute();
   }
 
+  @CustomerScope()
   @Get('me')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user data' })

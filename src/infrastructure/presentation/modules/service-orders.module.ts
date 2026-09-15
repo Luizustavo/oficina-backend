@@ -63,5 +63,8 @@ import { PartRepository } from '@infrastructure/database/prisma/repositories/par
       useClass: ResendEmailNotificationService,
     },
   ],
+  // Exportado para o CustomerScopeGuard, que é global (registrado no
+  // AppModule) e precisa carregar a ordem para conferir o dono.
+  exports: [IServiceOrderRepository],
 })
 export class ServiceOrdersModule {}

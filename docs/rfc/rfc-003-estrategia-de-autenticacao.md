@@ -91,12 +91,29 @@ O CPF também não aparece em log nenhum — é dado pessoal sob a LGPD.
 - **Segredo simétrico compartilhado.** Comprometer o segredo em qualquer um dos dois serviços permite forjar token para ambos. Com RS256 só a chave privada emitiria, e a pública validaria. É o principal débito técnico desta decisão.
 - **Sincronização manual do segredo.** O Terraform gera o valor e ele precisa ser copiado para o `Secret` do Kubernetes. Um esquecimento aqui faz a API rejeitar todo token emitido pela Lambda — falha silenciosa e confusa de diagnosticar.
 - **A validação de CPF está duplicada** entre os dois repositórios — ver [ADR-006](../adr/adr-006-duplicacao-da-validacao-de-cpf.md).
-- **`role: CUSTOMER` ainda não é escopado.** Hoje o token de cliente acessa qualquer rota que não exija papel específico via `@Roles()`. Falta restringir o cliente a ver apenas os próprios dados — é a evolução mais urgente desta decisão.
+- **O papel `CUSTOMER` exigiu um guard próprio.** Um token de cliente é, do ponto de vista do `JwtAuthGuard`, tão válido quanto o de um funcionário. Como o `RolesGuard` libera toda rota sem `@Roles()`, o cliente alcançava rotas que não deveria. Resolvido com o `CustomerScopeGuard` (ver abaixo), mas é uma consequência direta de reaproveitar o mesmo formato de token para dois públicos.
+
+## Escopo do papel CUSTOMER
+
+Reaproveitar o formato de token trouxe um problema de autorização que só apareceu com o sistema no ar: o `RolesGuard` libera qualquer rota sem `@Roles()`, então um token de cliente alcançava 13 rotas que não deveria — listar todas as ordens da oficina, e até **apagar outros clientes e veículos**.
+
+A correção é o `CustomerScopeGuard`, global, registrado depois do `RolesGuard`. Ele **nega por padrão**: se o papel é `CUSTOMER` e a rota não foi marcada com `@CustomerScope(...)`, o acesso é negado. Token de funcionário não é tocado.
+
+| Rota liberada ao cliente | Restrição |
+|---|---|
+| `GET /api/auth/me` | nenhuma — devolve o próprio payload |
+| `GET /api/services`, `GET /api/services/:id` | nenhuma — catálogo e preços |
+| `GET /api/service-orders/customer/:customerId` | o parâmetro precisa ser o próprio id |
+| `GET /api/vehicles/customer/:customerId` | o parâmetro precisa ser o próprio id |
+| `GET /api/service-orders/:id` | a ordem é carregada e o dono conferido |
+
+Ordem inexistente e ordem de outro cliente devolvem a **mesma** resposta: diferenciá-las permitiria descobrir quais ids existem.
+
+Escolher negação por padrão, e não uma lista de rotas bloqueadas, é deliberado: com lista de bloqueio, toda rota nova nasce aberta e o erro é silencioso. Com negação por padrão, o erro é uma rota que não funciona — visível e barato de corrigir.
 
 ## Evolução recomendada
 
 Em ordem de prioridade:
 
-1. **Escopar o papel `CUSTOMER`**: cliente deve enxergar apenas suas ordens e seus veículos. É uma falha de autorização real enquanto não for feito.
-2. **Migrar para RS256**, com a chave privada apenas na Lambda e a pública distribuída via JWKS. Isso elimina o segredo compartilhado e passa a permitir o authorizer nativo do API Gateway.
+1. **Migrar para RS256**, com a chave privada apenas na Lambda e a pública distribuída via JWKS. Isso elimina o segredo compartilhado e passa a permitir o authorizer nativo do API Gateway.
 3. **Rotação automática do segredo** via AWS Secrets Manager, com sincronização para o cluster por External Secrets Operator.

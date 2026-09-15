@@ -32,6 +32,7 @@ import { DeliverOrderUseCase } from '@application/use-cases/service-order/delive
 import { CancelOrderUseCase } from '@application/use-cases/service-order/cancel-order.use-case';
 import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
 import { UserRole } from '@domain/enums/user-role.enum';
+import { CustomerScope } from '@infrastructure/presentation/decorators/customer-scope.decorator';
 import { Public } from '@infrastructure/presentation/decorators/public.decorator';
 import { Roles } from '@infrastructure/presentation/decorators/roles.decorator';
 
@@ -81,6 +82,7 @@ export class ServiceOrdersController {
     });
   }
 
+  @CustomerScope({ param: 'customerId' })
   @Get('customer/:customerId')
   @ApiOperation({ summary: 'List service orders by customer' })
   async listByCustomerHandler(@Param('customerId') customerId: string) {
@@ -122,6 +124,7 @@ export class ServiceOrdersController {
     return this.avgExecutionTime.execute();
   }
 
+  @CustomerScope({ order: 'id' })
   @Get(':id')
   @ApiOperation({ summary: 'Find service order by ID' })
   async findOne(@Param('id') id: string) {

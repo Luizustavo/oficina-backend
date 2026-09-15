@@ -20,6 +20,7 @@ import { DeleteServiceUseCase } from '@application/use-cases/service/delete-serv
 import { ListServicesUseCase } from '@application/use-cases/service/list-services.use-case';
 import { GetServiceUseCase } from '@application/use-cases/service/get-service.use-case';
 import { UserRole } from '@domain/enums/user-role.enum';
+import { CustomerScope } from '@infrastructure/presentation/decorators/customer-scope.decorator';
 import { Roles } from '@infrastructure/presentation/decorators/roles.decorator';
 
 @ApiTags('services')
@@ -42,6 +43,7 @@ export class ServicesController {
     return this.createService.execute(dto);
   }
 
+  @CustomerScope()
   @Get()
   @ApiOperation({ summary: 'List active services' })
   async list(
@@ -56,6 +58,7 @@ export class ServicesController {
     });
   }
 
+  @CustomerScope()
   @Get(':id')
   @ApiOperation({ summary: 'Find service by ID' })
   async findOne(@Param('id') id: string) {
