@@ -431,5 +431,6 @@ O relatório estará disponível em **http://localhost:9000/dashboard?id=oficina
 docker compose -f docker-compose.sonar.yml down
 ```
 
+---
 
   
