@@ -80,7 +80,7 @@ jobs:
           name: coverage
           path: coverage
       - name: SonarCloud scan + Quality Gate
-        uses: SonarSource/sonarqube-scan-action@v8
+        uses: SonarSource/sonarqube-scan-action@59202af334b4ba7b5db01b701b8e79f8b3bef0f4 # v8.5.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
@@ -177,7 +177,7 @@ jobs:
           DATABASE_URL: ${{ env.PLACEHOLDER_DATABASE_URL }}
       - run: npm run build
       - name: Docker build (smoke test only, not pushed)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           push: false

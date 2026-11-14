@@ -51,6 +51,7 @@ O Jest mede e cobra 80% das camadas de **domínio e aplicação** (`collectCover
 - A análise automática do SonarCloud fica **desligada**: a análise vem do CI, que é quem tem o relatório de cobertura.
 - A organização e a chave do projeto ficam nas variáveis `SONAR_ORGANIZATION` e `SONAR_PROJECT_KEY` do job `quality`. O token fica no secret `SONAR_TOKEN` do repositório.
 - O SonarCloud comenta o resultado do Quality Gate no próprio PR.
+- **Actions de terceiros são fixadas pelo hash do commit**, com a versão em comentário (`uses: dono/action@<sha> # v1.2.3`). Uma tag como `@v8` pode ser movida pelo dono para outro código, e o SonarCloud trata isso como vulnerabilidade (a regra do Quality Gate reprova o PR). As actions oficiais do GitHub (`actions/*`) podem ficar na tag.
 
 ## CD (`.github/workflows/cd-production.yml`)
 
