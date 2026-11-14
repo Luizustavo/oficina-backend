@@ -1,0 +1,24 @@
+# Rota do OS Service no Traefik (o ingress que já vem no k3s).
+#
+# O Traefik dá prioridade à regra de caminho mais longa, então /api/billing
+# (Billing Service) e /api/execution (Execution Service), declarados nos
+# repositórios deles, vencem este /api. Tudo o mais que começa com /api
+# — ordens de serviço, clientes, veículos, catálogo, auth, health, Swagger —
+# chega aqui. Ver ADR-015.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oficina-backend
+  namespace: oficina
+spec:
+  ingressClassName: traefik
+  rules:
+    - http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: oficina-backend
+                port:
+                  number: 80

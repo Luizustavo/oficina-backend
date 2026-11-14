@@ -114,5 +114,6 @@ jobs:
           set -euo pipefail
           sed "s#REPLACE_WITH_ECR_IMAGE_URI:latest#${IMAGE}#" k8s/deployment.yaml | kubectl apply -f -
           kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/ingress.yaml
           kubectl apply -f k8s/hpa.yaml
           kubectl rollout status deployment/oficina-backend -n oficina --timeout=120s
