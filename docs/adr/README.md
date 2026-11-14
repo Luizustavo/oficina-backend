@@ -6,12 +6,19 @@ Decisões arquiteturais **permanentes** — aquelas cuja reversão custaria caro
 |---|---|---|
 | [001](adr-001-k3s-em-ec2-no-lugar-do-eks.md) | k3s numa EC2 no lugar do EKS | Aceita |
 | [002](adr-002-hpa-para-escalabilidade.md) | HPA para escalabilidade horizontal | Aceita |
-| [003](adr-003-comunicacao-sincrona-rest.md) | Comunicação síncrona por REST | Aceita |
+| [003](adr-003-comunicacao-sincrona-rest.md) | Comunicação síncrona por REST | Substituída pela 010 |
 | [004](adr-004-segredos-em-variavel-de-ambiente-na-lambda.md) | Segredos da Lambda em variável de ambiente | Aceita, com ressalva |
 | [005](adr-005-terraform-state-compartilhado.md) | Terraform state remoto compartilhado | Aceita |
 | [006](adr-006-duplicacao-da-validacao-de-cpf.md) | Duplicar a validação de CPF entre repositórios | Aceita |
 | [007](adr-007-opentelemetry-no-lugar-de-agente-proprietario.md) | OpenTelemetry no lugar do agente do fornecedor | Aceita |
 | [008](adr-008-tabelas-de-juncao-no-lugar-de-json.md) | Tabelas de junção no lugar de campos Json | Aceita |
+| [009](adr-009-divisao-em-microsservicos.md) | Divisão em três microsserviços | Aceita |
+| [010](adr-010-mensageria-com-rabbitmq.md) | Mensageria assíncrona com RabbitMQ | Aceita |
+| [011](adr-011-saga-orquestrada.md) | Saga orquestrada, com o orquestrador no OS Service | Aceita |
+| [012](adr-012-mongodb-no-execution-service.md) | MongoDB no Execution Service | Aceita |
+| [013](adr-013-redis-com-dono-unico.md) | Redis com dono único: o Billing Service | Aceita |
+| [014](adr-014-lambda-de-autenticacao-e-a-tabela-customers.md) | A Lambda de autenticação e a tabela `customers` | Aceita |
+| [015](adr-015-traefik-como-ingress.md) | Traefik como ponto de entrada no cluster | Aceita |
 
 ## ADR ou RFC?
 
