@@ -53,6 +53,26 @@ O Jest mede e cobra 80% das camadas de **domínio e aplicação** (`collectCover
 - O SonarCloud comenta o resultado do Quality Gate no próprio PR.
 - **Actions de terceiros são fixadas pelo hash do commit**, com a versão em comentário (`uses: dono/action@<sha> # v1.2.3`). Uma tag como `@v8` pode ser movida pelo dono para outro código, e o SonarCloud trata isso como vulnerabilidade (a regra do Quality Gate reprova o PR). As actions oficiais do GitHub (`actions/*`) podem ficar na tag.
 
+### O que o SonarCloud cobra além do código
+
+A primeira análise da `main` olha o repositório inteiro, inclusive workflows, Dockerfile e manifestos k8s. Para um serviço novo já nascer com o Quality Gate verde:
+
+| Onde | Regra | Como está feito |
+|---|---|---|
+| Workflows e Dockerfile | Nada de scripts de instalação de terceiros | `npm ci --ignore-scripts`. Os motores do Prisma vêm do `prisma generate` e o bcrypt já vem compilado |
+| Workflows e Dockerfile | Versão exata do que roda | `npm run prisma:*` (usa o Prisma do `package-lock.json`) em vez de `npx prisma` |
+| Workflows | Actions de terceiros fixadas | Hash do commit, com a versão em comentário |
+| Workflows | Nenhuma senha no código | O Postgres do CI roda sem senha (`POSTGRES_HOST_AUTH_METHOD: trust`): ele é descartável e só existe durante o job |
+| `cd-production.yml` | Código de fork não roda com credenciais | O deploy exige que o CI tenha sido um `push` no próprio repositório |
+| Dockerfile | Container sem root | `USER node` |
+| Manifestos k8s | Sem token da API do Kubernetes nos pods | `automountServiceAccountToken: false` |
+| Manifestos k8s | Limite de memória em todo container | `resources.limits.memory`, inclusive no job de migração |
+| Código | Aleatório seguro | `crypto.randomInt`/`randomUUID`, nunca `Math.random` |
+
+Os `docker-compose*.yml` ficam fora da análise (`sonar.exclusions`): são só para desenvolvimento local e têm senhas fixas de propósito.
+
+O job `Build` termina com um **smoke test da imagem**: confere que ela não roda como root, que o bcrypt carrega e que os motores do Prisma estão lá. Isso pega a quebra que o `--ignore-scripts` poderia causar antes do deploy.
+
 ## CD (`.github/workflows/cd-production.yml`)
 
 Dispara quando o CI termina com sucesso na `main`, ou à mão (**Actions → Deploy to Production → Run workflow**).

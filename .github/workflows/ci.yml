@@ -29,7 +29,12 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - run: npm ci
+      - run: npm ci --ignore-scripts
+      # O ESLint precisa dos tipos do Prisma Client para checar os mappers.
+      # Com --ignore-scripts o npm ci não gera mais esses tipos sozinho.
+      - run: npm run prisma:generate
+        env:
+          DATABASE_URL: ${{ env.PLACEHOLDER_DATABASE_URL }}
       - run: npm run lint
 
   unit-tests:
@@ -41,8 +46,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - run: npm ci
-      - run: npx prisma generate
+      - run: npm ci --ignore-scripts
+      - run: npm run prisma:generate
         env:
           DATABASE_URL: ${{ env.PLACEHOLDER_DATABASE_URL }}
       # O Jest falha sozinho se a cobertura ficar abaixo de 80%
@@ -100,7 +105,8 @@ jobs:
         env:
           POSTGRES_DB: oficina_test_db
           POSTGRES_USER: oficina_user
-          POSTGRES_PASSWORD: oficina_pass
+          # Banco descartável do CI: sem senha (trust), em vez de uma senha fixa no código.
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
@@ -109,7 +115,7 @@ jobs:
           --health-timeout=5s
           --health-retries=5
     env:
-      DATABASE_URL: postgresql://oficina_user:oficina_pass@localhost:5432/oficina_test_db
+      DATABASE_URL: postgresql://oficina_user@localhost:5432/oficina_test_db
       JWT_SECRET: ci-secret
       JWT_EXPIRES_IN: 15m
       JWT_REFRESH_SECRET: ci-refresh-secret
@@ -121,9 +127,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - run: npm ci
-      - run: npx prisma generate
-      - run: npx prisma migrate deploy
+      - run: npm ci --ignore-scripts
+      - run: npm run prisma:generate
+      - run: npm run prisma:migrate:deploy
       - run: npm run test:int
 
   e2e-tests:
@@ -135,7 +141,8 @@ jobs:
         env:
           POSTGRES_DB: oficina_test_db
           POSTGRES_USER: oficina_user
-          POSTGRES_PASSWORD: oficina_pass
+          # Banco descartável do CI: sem senha (trust), em vez de uma senha fixa no código.
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
@@ -144,7 +151,7 @@ jobs:
           --health-timeout=5s
           --health-retries=5
     env:
-      DATABASE_URL: postgresql://oficina_user:oficina_pass@localhost:5432/oficina_test_db
+      DATABASE_URL: postgresql://oficina_user@localhost:5432/oficina_test_db
       JWT_SECRET: ci-secret
       JWT_EXPIRES_IN: 15m
       JWT_REFRESH_SECRET: ci-refresh-secret
@@ -156,9 +163,9 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - run: npm ci
-      - run: npx prisma generate
-      - run: npx prisma migrate deploy
+      - run: npm ci --ignore-scripts
+      - run: npm run prisma:generate
+      - run: npm run prisma:migrate:deploy
       - run: npm run test:e2e
 
   build:
@@ -171,8 +178,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      - run: npm ci
-      - run: npx prisma generate
+      - run: npm ci --ignore-scripts
+      - run: npm run prisma:generate
         env:
           DATABASE_URL: ${{ env.PLACEHOLDER_DATABASE_URL }}
       - run: npm run build
@@ -183,3 +190,21 @@ jobs:
           push: false
           build-args: |
             DATABASE_URL=${{ env.PLACEHOLDER_DATABASE_URL }}
+          # Disponibiliza a imagem para o passo seguinte (sem push).
+          load: true
+          tags: oficina-backend:ci
+
+      # A imagem instala as dependências com --ignore-scripts e roda sem root.
+      # Este passo garante que, mesmo assim, ela tem o que precisa para subir.
+      - name: Smoke test da imagem
+        run: |
+          set -euo pipefail
+          run() {
+            local cmd="$1"
+            docker run --rm --entrypoint sh oficina-backend:ci -c "$cmd"
+          }
+          [ "$(run 'id -u')" != "0" ] || { echo "::error::A imagem roda como root"; exit 1; }
+          run "node -e \"require('bcrypt').hashSync('x', 4)\"" && echo "bcrypt ok"
+          run "ls node_modules/@prisma/engines | grep -q schema-engine" && echo "motor de migração do Prisma ok"
+          run "ls generated/prisma | grep -q query_engine" && echo "motor de consultas do Prisma ok"
+          run "test -f dist/main.js || test -f dist/src/main.js" && echo "build ok"
