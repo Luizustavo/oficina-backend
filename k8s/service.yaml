@@ -1,17 +1,20 @@
-# NodePort instead of LoadBalancer: a plain k3s install has no AWS integration
-# to provision a real ELB, so the app is reached directly at
-# http://<node-public-ip>:30080 (see the oficina-infra-k8s repository).
+# ClusterIP: o Service só é alcançável de dentro do cluster. Quem atende a
+# porta pública 30080 é o Traefik (configurado no oficina-infra-k8s), que
+# encaminha para cá tudo o que começa com /api e não pertence a outro
+# microsserviço — ver ingress.yaml e ADR-015.
+#
+# Até a Fase 3 este Service era NodePort 30080. Ele não pode voltar a ser:
+# a porta pertence ao Traefik, e o apply falharia com "port already allocated".
 apiVersion: v1
 kind: Service
 metadata:
   name: oficina-backend
   namespace: oficina
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: oficina-backend
   ports:
     - port: 80
       targetPort: 3000
-      nodePort: 30080
       protocol: TCP

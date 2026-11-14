@@ -7,7 +7,8 @@
 | `secret.example.yaml` | Template do Secret — copie para `secret.yaml` (gitignored) e preencha |
 | `migration-job.yaml` | Job que roda `prisma migrate deploy` antes do deploy da aplicação |
 | `deployment.yaml` | Deployment da aplicação (2 réplicas, probes de liveness/readiness) |
-| `service.yaml` | Service `NodePort` (30080), expõe a porta 80 → 3000 |
+| `service.yaml` | Service `ClusterIP`, expõe a porta 80 → 3000 dentro do cluster |
+| `ingress.yaml` | Rota `/api` no Traefik, que atende a porta pública 30080 (ver ADR-015) |
 | `hpa.yaml` | HorizontalPodAutoscaler (2-6 réplicas, CPU e memória a 70%) |
 
 ## Pré-requisitos
@@ -54,6 +55,7 @@ kubectl wait --for=condition=complete job/oficina-backend-migrate -n oficina --t
 
 sed "s#REPLACE_WITH_ECR_IMAGE_URI#${ECR_URL}#" deployment.yaml | kubectl apply -f -
 kubectl apply -f service.yaml
+kubectl apply -f ingress.yaml
 kubectl apply -f hpa.yaml
 ```
 
@@ -66,7 +68,7 @@ kubectl apply -f hpa.yaml
 3. Builda a imagem e publica no ECR (tag = SHA do commit, + `:latest`)
 4. Busca o kubeconfig do nó via SSM (mesma técnica usada manualmente, sem SSH)
 5. Roda o Job de migração e espera terminar
-6. Aplica Deployment (com a imagem nova), Service e HPA
+6. Aplica Deployment (com a imagem nova), Service, Ingress e HPA
 
 **Secrets necessários no repositório** (Settings → Secrets and variables → Actions), configurados **uma vez só** — são as mesmas credenciais do profile `oficina-fase2` local, não mudam quando a infra é recriada:
 - `AWS_ACCESS_KEY_ID`
@@ -89,7 +91,8 @@ kubectl exec -n oficina "$POD" -- npm run prisma:seed
 ```bash
 kubectl get pods -n oficina
 kubectl get hpa -n oficina -w
-cd ../infra && terraform output -raw app_url   # http://<ip-publico>:30080
+kubectl get ingress -n oficina                  # rota /api no Traefik
+cd ../infra && terraform output -raw app_url   # http://<ip-publico>:30080 (Traefik)
 ```
 
 ## Demonstrando a escalabilidade automática

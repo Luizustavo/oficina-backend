@@ -221,7 +221,7 @@ O servidor estará disponível em: **http://localhost:3000**
 
 ## Deploy em Kubernetes
 
-Manifestos completos em [`/k8s`](k8s), com instruções passo a passo em [`k8s/README.md`](k8s/README.md): namespace, ConfigMap, Secret, Job de migração, Deployment, Service (`NodePort`) e HorizontalPodAutoscaler.
+Manifestos completos em [`/k8s`](k8s), com instruções passo a passo em [`k8s/README.md`](k8s/README.md): namespace, ConfigMap, Secret, Job de migração, Deployment, Service (`ClusterIP`), Ingress (rota `/api` no Traefik) e HorizontalPodAutoscaler.
 
 Resumo rápido (pressupõe infraestrutura já provisionada — veja seção seguinte):
 
