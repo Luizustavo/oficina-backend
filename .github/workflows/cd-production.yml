@@ -10,10 +10,15 @@ on:
 permissions:
   contents: read
 
+# Esteira padrão dos microsserviços (docs/arquitetura/esteira-ci-cd.md). Para
+# usar em outro serviço, copie este arquivo e mude só as três últimas
+# variáveis; o corpo não depende do nome do serviço.
 env:
   AWS_REGION: sa-east-1
   K3S_NODE_TAG: oficina-backend-k3s-node
-  ECR_REPOSITORY: oficina-backend
+  ECR_REPOSITORY: oficina-backend   # repositório no ECR (oficina-infra-k8s)
+  K8S_NAMESPACE: oficina            # namespace do serviço no cluster
+  DEPLOYMENT_NAME: oficina-backend  # Deployment em k8s/deployment.yaml
 
 jobs:
   deploy:
@@ -34,7 +39,7 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -94,26 +99,30 @@ jobs:
 
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
-      - uses: azure/setup-kubectl@v4
+      - uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4.0.1
         with:
           version: 'latest'
 
       # Namespace/ConfigMap/Secret are applied once by hand right after
       # `terraform apply` (see k8s/README.md) and aren't touched here —
       # the DB password and API keys they hold don't need to live in CI.
+      # Só para serviços com banco relacional (Prisma). Quem não tem
+      # k8s/migration-job.yaml (ex.: Execution Service, com MongoDB) pula.
       - name: Run database migration
+        if: hashFiles('k8s/migration-job.yaml') != ''
         run: |
           set -euo pipefail
           sed "s#REPLACE_WITH_ECR_IMAGE_URI:latest#${IMAGE}#" k8s/migration-job.yaml > "${RUNNER_TEMP}/migration-job.yaml"
           kubectl delete -f "${RUNNER_TEMP}/migration-job.yaml" --ignore-not-found
           kubectl apply -f "${RUNNER_TEMP}/migration-job.yaml"
-          kubectl wait --for=condition=complete job/oficina-backend-migrate -n oficina --timeout=120s
+          kubectl wait --for=condition=complete -f "${RUNNER_TEMP}/migration-job.yaml" --timeout=120s
 
+      # Manifestos opcionais (ingress, hpa) só são aplicados se existirem.
       - name: Deploy application manifests
         run: |
           set -euo pipefail
           sed "s#REPLACE_WITH_ECR_IMAGE_URI:latest#${IMAGE}#" k8s/deployment.yaml | kubectl apply -f -
-          kubectl apply -f k8s/service.yaml
-          kubectl apply -f k8s/ingress.yaml
-          kubectl apply -f k8s/hpa.yaml
-          kubectl rollout status deployment/oficina-backend -n oficina --timeout=120s
+          for f in service ingress hpa; do
+            if [ -f "k8s/${f}.yaml" ]; then kubectl apply -f "k8s/${f}.yaml"; fi
+          done
+          kubectl rollout status "deployment/${DEPLOYMENT_NAME}" -n "${K8S_NAMESPACE}" --timeout=180s
