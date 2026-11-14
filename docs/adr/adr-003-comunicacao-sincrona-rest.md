@@ -1,6 +1,8 @@
 # ADR-003 — Comunicação síncrona por REST
 
-**Status:** Aceita · **Data:** 2026-09-13
+**Status:** Substituída pela [ADR-010](adr-010-mensageria-com-rabbitmq.md) · **Data:** 2026-09-13
+
+> Na Fase 4 o sistema foi dividido em três serviços ([ADR-009](adr-009-divisao-em-microsservicos.md)), atingindo a condição de revisão registrada no fim deste documento. REST continua sendo a interface externa de cada serviço; a comunicação entre serviços passou a ser assíncrona, pelo RabbitMQ.
 
 ## Contexto
 
