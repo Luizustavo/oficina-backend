@@ -251,7 +251,9 @@ A infraestrutura **não mora mais neste repositório**. Desde a Fase 3 ela está
 
 ## CI/CD
 
-`.github/workflows/ci.yml` builda, testa (unitário/integração/e2e) e valida a imagem Docker em todo push/PR. `.github/workflows/cd-production.yml` faz o deploy de verdade em push para `main` (ou manualmente via **Actions → Deploy to Production → Run workflow**): publica a imagem no ECR, roda a migração e atualiza Deployment/Service/HPA no cluster — descobrindo o nó k3s dinamicamente por tag, sem depender de IP fixo ou de state local do Terraform.
+`.github/workflows/ci.yml` roda lint, testes (unitário com cobertura mínima de 80%, integração e E2E), a análise do **SonarCloud com Quality Gate** e o build da imagem Docker em todo push/PR. `.github/workflows/cd-production.yml` faz o deploy de verdade depois de um CI verde na `main` (ou manualmente via **Actions → Deploy to Production → Run workflow**): publica a imagem no ECR, roda a migração e atualiza Deployment/Service/Ingress/HPA no cluster, descobrindo o nó k3s dinamicamente por tag, sem depender de IP fixo ou de state local do Terraform.
+
+A `main` é protegida: só entra código por Pull Request com todos os checks verdes. A esteira é o modelo dos três microsserviços. Detalhes em [docs/arquitetura/esteira-ci-cd.md](docs/arquitetura/esteira-ci-cd.md).
 
 ---
 
@@ -390,7 +392,9 @@ A cada transição, o cliente recebe um e-mail automático. A transição `AWAIT
 
 ## Análise de Qualidade e Segurança (SonarQube)
 
-O projeto inclui configuração pronta para análise estática com SonarQube Community via Docker.
+No CI, a análise roda no **SonarCloud** a cada Pull Request (job `Quality (SonarCloud)`), e um Quality Gate reprovado bloqueia o merge. Veja [docs/arquitetura/esteira-ci-cd.md](docs/arquitetura/esteira-ci-cd.md).
+
+Para rodar a mesma análise localmente, o projeto inclui configuração pronta para o SonarQube Community via Docker.
 
 ### 1. Gerar relatório de cobertura
 
