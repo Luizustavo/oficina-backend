@@ -24,9 +24,17 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
-    # Only deploy if the CI run that just completed for this branch passed
-    # (workflow_dispatch has no workflow_run context, so let it through).
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # Só faz deploy depois de um CI verde disparado por um *push* na main
+    # deste repositório. O filtro `branches: [main]` sozinho não basta: um PR
+    # vindo de um fork cuja branch também se chame "main" dispararia o deploy
+    # com o código do fork e as credenciais AWS de produção.
+    # (workflow_dispatch não tem contexto de workflow_run e passa direto.)
+    if: >-
+      github.event_name == 'workflow_dispatch' || (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository
+      )
     # Add required reviewers to the "production" Environment in
     # Settings > Environments so this job pauses for manual approval
     # before it runs.

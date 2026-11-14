@@ -11,10 +11,19 @@ spec:
   template:
     spec:
       restartPolicy: Never
+      # A migração não fala com a API do Kubernetes; sem o token da service
+      # account montado, um processo comprometido no pod não tem o que usar.
+      automountServiceAccountToken: false
       containers:
         - name: migrate
           image: REPLACE_WITH_ECR_IMAGE_URI:latest
-          command: ["npx", "prisma", "migrate", "deploy"]
+          command: ["npm", "run", "prisma:migrate:deploy"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
           envFrom:
             - secretRef:
                 name: oficina-backend-secret

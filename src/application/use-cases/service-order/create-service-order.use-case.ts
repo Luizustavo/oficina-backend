@@ -11,14 +11,14 @@ import { IVehicleRepository } from '@domain/repositories/vehicle.repository.inte
 import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
 import { ServiceOrderMetrics } from '@infrastructure/observability/service-order.metrics';
 import { ServiceOrderMapper } from '@application/mappers/service-order.mapper';
-import { randomUUID } from 'crypto';
+import { randomInt, randomUUID } from 'crypto';
 
 function generateOrderNumber(): string {
   const now = new Date();
   const year = now.getFullYear();
-  const random = Math.floor(Math.random() * 999999)
-    .toString()
-    .padStart(6, '0');
+  // randomInt (crypto) e não Math.random: o número da OS é exibido ao cliente
+  // e não deve ser previsível a partir de outros números já emitidos.
+  const random = randomInt(0, 1_000_000).toString().padStart(6, '0');
   return `OS${year}${random}`;
 }
 
