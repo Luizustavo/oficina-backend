@@ -30,6 +30,11 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci --ignore-scripts
+      # O ESLint precisa dos tipos do Prisma Client para checar os mappers.
+      # Com --ignore-scripts o npm ci não gera mais esses tipos sozinho.
+      - run: npm run prisma:generate
+        env:
+          DATABASE_URL: ${{ env.PLACEHOLDER_DATABASE_URL }}
       - run: npm run lint
 
   unit-tests:
@@ -194,7 +199,10 @@ jobs:
       - name: Smoke test da imagem
         run: |
           set -euo pipefail
-          run() { docker run --rm --entrypoint sh oficina-backend:ci -c "$1"; }
+          run() {
+            local cmd="$1"
+            docker run --rm --entrypoint sh oficina-backend:ci -c "$cmd"
+          }
           [ "$(run 'id -u')" != "0" ] || { echo "::error::A imagem roda como root"; exit 1; }
           run "node -e \"require('bcrypt').hashSync('x', 4)\"" && echo "bcrypt ok"
           run "ls node_modules/@prisma/engines | grep -q schema-engine" && echo "motor de migração do Prisma ok"

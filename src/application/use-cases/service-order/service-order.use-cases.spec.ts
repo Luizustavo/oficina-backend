@@ -463,6 +463,69 @@ describe('CreateServiceOrderUseCase', () => {
       }),
     ).rejects.toThrow(BusinessRuleException);
   });
+
+  it('should throw NotFoundException when vehicle does not exist', async () => {
+    const orderRepo = makeOrderRepo();
+    const customerRepo = {
+      existsById: jest.fn().mockResolvedValue(true),
+    } as any;
+    const vehicleRepo = {
+      findById: jest.fn().mockResolvedValue(null),
+    } as any;
+
+    const useCase = new CreateServiceOrderUseCase(
+      orderRepo,
+      customerRepo,
+      vehicleRepo,
+      makeMetrics(),
+      makeLogger(),
+    );
+    await expect(
+      useCase.execute({
+        customerId: 'c-1',
+        vehicleId: 'v-1',
+        problemDescription: 'Test',
+      }),
+    ).rejects.toThrow(NotFoundException);
+    expect(orderRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('should create a RECEIVED order with a generated order number', async () => {
+    const orderRepo = makeOrderRepo();
+    orderRepo.create.mockImplementation((order) => Promise.resolve(order));
+    const customerRepo = {
+      existsById: jest.fn().mockResolvedValue(true),
+    } as any;
+    const vehicleRepo = {
+      findById: jest.fn().mockResolvedValue({ customerId: 'c-1' }),
+    } as any;
+    const metrics = makeMetrics();
+
+    const useCase = new CreateServiceOrderUseCase(
+      orderRepo,
+      customerRepo,
+      vehicleRepo,
+      metrics,
+      makeLogger(),
+    );
+    const response = await useCase.execute({
+      customerId: 'c-1',
+      vehicleId: 'v-1',
+      problemDescription: 'Barulho no freio',
+    });
+
+    // "OS" + ano com 4 dígitos + 6 dígitos aleatórios
+    const year = new Date().getFullYear();
+    expect(response.orderNumber).toMatch(new RegExp(`^OS${year}\\d{6}$`));
+    expect(response.status).toBe(ServiceOrderStatus.RECEIVED);
+    expect(response.customerId).toBe('c-1');
+    expect(response.vehicleId).toBe('v-1');
+    expect(orderRepo.create).toHaveBeenCalledTimes(1);
+    expect(metrics.recordTransition).toHaveBeenCalledWith({
+      fromStatus: 'NONE',
+      toStatus: ServiceOrderStatus.RECEIVED,
+    });
+  });
 });
 
 describe('AddPartToOrderUseCase', () => {
