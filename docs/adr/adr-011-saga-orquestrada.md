@@ -67,7 +67,11 @@ A oficina cobra **depois da aprovação e antes de executar**. Isso foi escolhid
 | 5 | Executar | — | `execution.job.started` → OS → `IN_PROGRESS`; `execution.job.completed` → OS → `COMPLETED`. Saga `COMPLETED` | `execution.job.failed` | `billing.payment.refund` → `refunded`. Devolve peças. OS → `CANCELED` |
 | — | Cancelamento manual pela equipe | — | — | `cancel-order` com saga `RUNNING` | Compensa o passo atual: `execution.job.cancel` se enfileirada, estorno se paga, cancelamento de orçamento se não paga |
 
-**A reserva de peças é local.** Baixar e devolver estoque acontece no OS, na mesma transação que muda o status da OS e grava a próxima mensagem no outbox. Não há passo remoto que possa falhar entre as duas operações.
+**A reserva de peças é local e acontece na aprovação.** Adicionar peça à OS só confere o estoque; a baixa acontece quando o orçamento é aprovado, e a devolução é compensação dos passos seguintes. Se na aprovação a peça já não estiver disponível (outra OS consumiu o estoque nesse meio-tempo), a saga cancela o orçamento com `PARTS_UNAVAILABLE` e a OS vai para `CANCELED`.
+
+**Pagamento depois do cancelamento.** Se `billing.payment.confirmed` chegar depois de a saga ter cancelado o orçamento (prazo vencido ou cancelamento manual), o OS manda `billing.payment.refund` com `LATE_PAYMENT`.
+
+**A reserva de peças não depende de outro serviço.** Baixar e devolver estoque acontece no OS, na mesma transação que muda o status da OS e grava a próxima mensagem no outbox. Não há passo remoto que possa falhar entre as duas operações.
 
 **A compensação também pode falhar.** Se o estorno for recusado pelo Mercado Pago (`billing.payment.refund-failed`), a saga vai para `FAILED`, o que dispara alerta e exige intervenção manual. Uma compensação de dinheiro que falha não se resolve com mais automação.
 
@@ -75,11 +79,13 @@ A oficina cobra **depois da aprovação e antes de executar**. Isso foi escolhid
 
 ```
 saga_instances
-  id, order_id (único), step, status, deadline_at, last_error, created_at, updated_at
+  id, order_id, step, status, deadline_at, last_error, created_at, updated_at
 
 saga_step_logs
   id, saga_id, step, event_type, message_id, outcome, created_at
 ```
+
+**Uma saga por tentativa.** Se o orçamento não puder ser gerado, a OS volta para `IN_DIAGNOSIS` e a equipe pode pedir aprovação de novo, o que abre uma nova saga para a mesma OS. Por isso `order_id` não é único: a saga atual de uma OS é a mais recente. Eventos que trazem o `sagaId` de uma tentativa anterior são tratados como "de um passo já superado".
 
 `status`: `RUNNING` → `COMPLETED`, ou `RUNNING` → `COMPENSATING` → `COMPENSATED`, ou `FAILED` quando a compensação falha. O histórico fica em tabela, e não em JSON, pelo mesmo motivo da [ADR-008](adr-008-tabelas-de-juncao-no-lugar-de-json.md).
 

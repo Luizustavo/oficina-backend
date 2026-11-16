@@ -73,11 +73,13 @@ describe('ServiceOrder', () => {
       expect(so.status).toBe(ServiceOrderStatus.AWAITING_APPROVAL);
     });
 
-    it('should transition AWAITING_APPROVAL → IN_PROGRESS and record timestamps', () => {
+    it('should go through payment to IN_PROGRESS and record timestamps', () => {
       const so = ServiceOrderEntity.create(validProps);
       so.startDiagnosis();
       so.requestApproval();
-      so.approve();
+      so.approveBudget();
+      so.confirmPayment();
+      so.startExecution();
       expect(so.status).toBe(ServiceOrderStatus.IN_PROGRESS);
       expect(so.approvedAt).toBeInstanceOf(Date);
       expect(so.startedAt).toBeInstanceOf(Date);
@@ -87,7 +89,9 @@ describe('ServiceOrder', () => {
       const so = ServiceOrderEntity.create(validProps);
       so.startDiagnosis();
       so.requestApproval();
-      so.approve();
+      so.approveBudget();
+      so.confirmPayment();
+      so.startExecution();
       so.complete();
       expect(so.status).toBe(ServiceOrderStatus.COMPLETED);
       expect(so.finishedAt).toBeInstanceOf(Date);
@@ -97,7 +101,9 @@ describe('ServiceOrder', () => {
       const so = ServiceOrderEntity.create(validProps);
       so.startDiagnosis();
       so.requestApproval();
-      so.approve();
+      so.approveBudget();
+      so.confirmPayment();
+      so.startExecution();
       so.complete();
       so.deliver();
       expect(so.status).toBe(ServiceOrderStatus.DELIVERED);
@@ -119,11 +125,20 @@ describe('ServiceOrder', () => {
       const so = ServiceOrderEntity.create(validProps);
       so.startDiagnosis();
       so.requestApproval();
-      so.approve();
+      so.approveBudget();
+      so.confirmPayment();
+      so.startExecution();
       so.complete();
       so.deliver();
       expect(() => so.cancel()).toThrow(InvalidStatusTransitionException);
     });
+  });
+
+  it('should no longer approve directly from AWAITING_APPROVAL to IN_PROGRESS', () => {
+    const so = ServiceOrderEntity.create(validProps);
+    so.startDiagnosis();
+    so.requestApproval();
+    expect(() => so.startExecution()).toThrow(InvalidStatusTransitionException);
   });
 
   describe('saga transitions (Fase 4)', () => {
@@ -213,7 +228,9 @@ describe('ServiceOrder', () => {
       const so = ServiceOrderEntity.create(validProps);
       so.startDiagnosis();
       so.requestApproval();
-      so.approve();
+      so.approveBudget();
+      so.confirmPayment();
+      so.startExecution();
       expect(() =>
         so.addService({
           serviceId: 's-1',
@@ -244,7 +261,9 @@ describe('ServiceOrder', () => {
       const so = ServiceOrderEntity.create(validProps);
       so.startDiagnosis();
       so.requestApproval();
-      so.approve();
+      so.approveBudget();
+      so.confirmPayment();
+      so.startExecution();
       expect(() =>
         so.addPart({
           partId: 'p-1',
@@ -275,7 +294,9 @@ describe('ServiceOrder', () => {
       const so = ServiceOrderEntity.create(validProps);
       so.startDiagnosis();
       so.requestApproval();
-      so.approve();
+      so.approveBudget();
+      so.confirmPayment();
+      so.startExecution();
       expect(so.canModifyItems()).toBe(false);
     });
   });

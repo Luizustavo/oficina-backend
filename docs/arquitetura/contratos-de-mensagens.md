@@ -173,7 +173,9 @@ Compensação. Cancela o orçamento e, se houver cobrança pendente no Mercado P
 { "reason": "BUDGET_REJECTED" }
 ```
 
-`reason`: `BUDGET_REJECTED` | `APPROVAL_TIMEOUT` | `PAYMENT_FAILED` | `PAYMENT_TIMEOUT` | `MANUAL_CANCEL`
+`reason`: `BUDGET_REJECTED` | `APPROVAL_TIMEOUT` | `PAYMENT_FAILED` | `PAYMENT_TIMEOUT` | `PARTS_UNAVAILABLE` | `MANUAL_CANCEL`
+
+`PARTS_UNAVAILABLE`: na aprovação, o OS não conseguiu reservar as peças (outra OS consumiu o estoque entre o orçamento e a aprovação).
 
 Responde com: `billing.budget.canceled`. Idempotente: cancelar um orçamento já cancelado responde `canceled` de novo.
 
@@ -185,7 +187,9 @@ Compensação. Estorna o pagamento aprovado da OS.
 { "reason": "EXECUTION_FAILED" }
 ```
 
-`reason`: `EXECUTION_FAILED` | `MANUAL_CANCEL`
+`reason`: `EXECUTION_FAILED` | `MANUAL_CANCEL` | `LATE_PAYMENT`
+
+`LATE_PAYMENT`: o Mercado Pago confirmou o pagamento depois de a saga já ter cancelado o orçamento (prazo de pagamento vencido ou cancelamento manual). O OS pede o estorno, para o cliente não pagar por uma OS cancelada.
 
 Responde com: `billing.payment.refunded` ou `billing.payment.refund-failed`.
 

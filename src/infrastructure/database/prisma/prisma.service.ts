@@ -11,6 +11,13 @@ import { PrismaPg } from '@prisma/adapter-pg';
 /** Tempo máximo de uma transação aberta por `runInTransaction`. */
 const TRANSACTION_TIMEOUT_MS = 15_000;
 
+type AfterCommitCallback = () => Promise<void> | void;
+
+interface TransactionContext {
+  tx: Prisma.TransactionClient;
+  afterCommit: AfterCommitCallback[];
+}
+
 @Injectable()
 export class PrismaService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
@@ -18,8 +25,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   // Transação ativa no fluxo atual (requisição, mensagem consumida, tick do
   // relay). Os getters abaixo leem daqui, então todo repositório participa da
   // transação aberta por `runInTransaction` sem receber nada por parâmetro.
-  private readonly transaction =
-    new AsyncLocalStorage<Prisma.TransactionClient>();
+  private readonly transaction = new AsyncLocalStorage<TransactionContext>();
 
   constructor() {
     const adapter = new PrismaPg({
@@ -61,10 +67,16 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   get processedMessage() {
     return this.db.processedMessage;
   }
+  get sagaInstance() {
+    return this.db.sagaInstance;
+  }
+  get sagaStepLog() {
+    return this.db.sagaStepLog;
+  }
 
   /** Cliente da transação ativa, ou o cliente normal fora de uma. */
   private get db(): PrismaClient | Prisma.TransactionClient {
-    return this.transaction.getStore() ?? this.client;
+    return this.transaction.getStore()?.tx ?? this.client;
   }
 
   /**
@@ -78,9 +90,43 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     if (this.transaction.getStore()) {
       return fn();
     }
-    return this.client.$transaction((tx) => this.transaction.run(tx, fn), {
-      timeout: TRANSACTION_TIMEOUT_MS,
-    });
+    const afterCommit: AfterCommitCallback[] = [];
+    const result = await this.client.$transaction(
+      (tx) => this.transaction.run({ tx, afterCommit }, fn),
+      { timeout: TRANSACTION_TIMEOUT_MS },
+    );
+    // Só depois do commit. Uma falha aqui (e-mail fora do ar, por exemplo)
+    // não desfaz nada: a transação já foi confirmada.
+    for (const callback of afterCommit) {
+      try {
+        await callback();
+      } catch (error) {
+        this.logger.warn(
+          `After-commit callback failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Agenda `fn` para depois do commit da transação atual. Fora de uma
+   * transação, roda na hora. Para efeitos fora do banco (e-mail, métricas):
+   * se a transação for desfeita, eles não acontecem.
+   */
+  afterCommit(fn: AfterCommitCallback): void {
+    const context = this.transaction.getStore();
+    if (context) {
+      context.afterCommit.push(fn);
+      return;
+    }
+    void Promise.resolve()
+      .then(fn)
+      .catch((error: unknown) =>
+        this.logger.warn(
+          `After-commit callback failed: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      );
   }
 
   $queryRawUnsafe<T = unknown>(
@@ -115,6 +161,8 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
       'refresh_tokens',
       'outbox_messages',
       'processed_messages',
+      'saga_step_logs',
+      'saga_instances',
       // Filhas antes das pais; o CASCADE do TRUNCATE já cobriria, mas ser
       // explícito evita surpresa se o cascade mudar.
       'service_order_services',

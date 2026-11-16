@@ -6,7 +6,6 @@ import {
 import { ListServiceOrdersByCustomerUseCase } from './list-service-orders-by-customer.use-case';
 import { ListServiceOrdersByStatusUseCase } from './list-service-orders-by-status.use-case';
 import { GetAverageExecutionTimeUseCase } from './get-average-execution-time.use-case';
-import { ProcessBudgetDecisionUseCase } from './process-budget-decision.use-case';
 import { CreateServiceOrderUseCase } from './create-service-order.use-case';
 import { IEmailNotificationService } from '@domain/services/email-notification.service.interface';
 import { ListServiceOrdersUseCase } from './list-service-orders.use-case';
@@ -17,8 +16,6 @@ import { RequestApprovalUseCase } from './request-approval.use-case';
 import { GetServiceOrderUseCase } from './get-service-order.use-case';
 import { StartDiagnosisUseCase } from './start-diagnosis.use-case';
 import { AddPartToOrderUseCase } from './add-part-to-order.use-case';
-import { CompleteOrderUseCase } from './complete-order.use-case';
-import { ApproveOrderUseCase } from './approve-order.use-case';
 import { DeliverOrderUseCase } from './deliver-order.use-case';
 import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
 import { CancelOrderUseCase } from './cancel-order.use-case';
@@ -27,7 +24,11 @@ import { ServiceOrderEntity } from '@domain/entities/service-order/service-order
 import { ServiceOrderMetrics } from '@infrastructure/observability/service-order.metrics';
 import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
 import { IPartRepository } from '@domain/repositories/part.repository.interface';
-import { BudgetDecision } from '@application/dtos/request/service-order.dto';
+import { ProcessSagaEventUseCase } from '@application/use-cases/saga/process-saga-event.use-case';
+import { SagaInstanceEntity } from '@domain/entities/saga/saga-instance.entity';
+import { ITransactionManager } from '@domain/services/transaction-manager.interface';
+import { ISagaRepository } from '@domain/repositories/saga.repository.interface';
+import { SagaStatus, SagaStep } from '@domain/enums/saga.enum';
 import { CustomerEntity } from '@domain/entities/customer/customer.entity';
 import { CustomerType } from '@domain/enums/customer-type.enum';
 import { PartEntity } from '@domain/entities/part/part.entity';
@@ -78,6 +79,25 @@ const makeLogger = (): jest.Mocked<Logger> =>
     warn: jest.fn(),
     error: jest.fn(),
   }) as unknown as jest.Mocked<Logger>;
+
+// Sem banco: a transação só executa a função; o "depois do commit" roda na hora.
+const makeTransactions = (): jest.Mocked<ITransactionManager> => ({
+  run: jest.fn((fn: () => Promise<unknown>) =>
+    fn(),
+  ) as jest.Mocked<ITransactionManager>['run'],
+  afterCommit: jest.fn((fn: () => Promise<void> | void) => {
+    void fn();
+  }),
+});
+
+const makeSagaRepo = (): jest.Mocked<ISagaRepository> => ({
+  create: jest.fn((saga: SagaInstanceEntity) => Promise.resolve(saga)),
+  update: jest.fn((saga: SagaInstanceEntity) => Promise.resolve(saga)),
+  findById: jest.fn(),
+  findCurrentByOrderId: jest.fn().mockResolvedValue(null),
+  appendLog: jest.fn(),
+  findLogs: jest.fn(),
+});
 
 const makeOrder = (status = ServiceOrderStatus.RECEIVED) =>
   ServiceOrderEntity.reconstitute(
@@ -151,18 +171,64 @@ describe('StartDiagnosisUseCase', () => {
 });
 
 describe('CancelOrderUseCase', () => {
-  it('should cancel a RECEIVED order', async () => {
-    const repo = makeOrderRepo();
-    const order = makeOrder();
-    repo.findById.mockResolvedValue(order);
-    repo.update.mockImplementation(async (o) => o);
-
-    const result = await new CancelOrderUseCase(
+  const makeUseCase = (
+    repo: ReturnType<typeof makeOrderRepo>,
+    sagaRepo = makeSagaRepo(),
+    processSagaEvent = {
+      execute: jest.fn(),
+    } as unknown as ProcessSagaEventUseCase,
+  ) =>
+    new CancelOrderUseCase(
       repo,
+      sagaRepo,
+      processSagaEvent,
       makeEmailService(),
       makeMetrics(),
       makeLogger(),
-    ).execute('so-1');
+    );
+
+  it('should cancel a RECEIVED order (no saga yet)', async () => {
+    const repo = makeOrderRepo();
+    repo.findById.mockResolvedValue(makeOrder());
+    repo.update.mockImplementation(async (o) => o);
+
+    const result = await makeUseCase(repo).execute('so-1');
+    expect(result.status).toBe(ServiceOrderStatus.CANCELED);
+  });
+
+  it('should cancel through the saga when one is running, so it compensates', async () => {
+    const repo = makeOrderRepo();
+    const order = makeOrder(ServiceOrderStatus.AWAITING_PAYMENT);
+    repo.findById.mockResolvedValue(order);
+    const sagaRepo = makeSagaRepo();
+    sagaRepo.findCurrentByOrderId.mockResolvedValue(
+      SagaInstanceEntity.reconstitute(
+        {
+          orderId: 'so-1',
+          step: SagaStep.AWAITING_PAYMENT,
+          status: SagaStatus.RUNNING,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        'saga-1',
+      ),
+    );
+    const canceled = makeOrder(ServiceOrderStatus.CANCELED);
+    const processSagaEvent = {
+      execute: jest
+        .fn()
+        .mockResolvedValue({ outcome: 'applied', order: canceled }),
+    } as unknown as ProcessSagaEventUseCase;
+
+    const result = await makeUseCase(repo, sagaRepo, processSagaEvent).execute(
+      'so-1',
+    );
+
+    expect(processSagaEvent.execute).toHaveBeenCalledWith({
+      type: 'saga.manual-cancel',
+      orderId: 'so-1',
+    });
+    expect(repo.update).not.toHaveBeenCalled();
     expect(result.status).toBe(ServiceOrderStatus.CANCELED);
   });
 
@@ -170,14 +236,15 @@ describe('CancelOrderUseCase', () => {
     const repo = makeOrderRepo();
     repo.findById.mockResolvedValue(makeOrder(ServiceOrderStatus.DELIVERED));
 
-    await expect(
-      new CancelOrderUseCase(
-        repo,
-        makeEmailService(),
-        makeMetrics(),
-        makeLogger(),
-      ).execute('so-1'),
-    ).rejects.toThrow();
+    await expect(makeUseCase(repo).execute('so-1')).rejects.toThrow();
+  });
+
+  it('should throw NotFoundException when order not found', async () => {
+    const repo = makeOrderRepo();
+    repo.findById.mockResolvedValue(null);
+    await expect(makeUseCase(repo).execute('missing')).rejects.toThrow(
+      NotFoundException,
+    );
   });
 });
 
@@ -241,19 +308,53 @@ describe('ListServiceOrdersByStatusUseCase', () => {
 });
 
 describe('RequestApprovalUseCase', () => {
-  it('should request approval from IN_DIAGNOSIS status', async () => {
+  it('should start the saga: AWAITING_APPROVAL + saga + billing.budget.create in the outbox', async () => {
     const repo = makeOrderRepo();
-    const order = makeOrder(ServiceOrderStatus.IN_DIAGNOSIS);
-    repo.findById.mockResolvedValue(order);
+    repo.findById.mockResolvedValue(makeOrder(ServiceOrderStatus.IN_DIAGNOSIS));
     repo.update.mockImplementation(async (o) => o);
+    const sagaRepo = makeSagaRepo();
+    const transactions = makeTransactions();
+    const emailService = makeEmailService();
 
     const result = await new RequestApprovalUseCase(
       repo,
-      makeEmailService(),
+      sagaRepo,
+      transactions,
+      emailService,
       makeMetrics(),
       makeLogger(),
     ).execute('so-1');
+
     expect(result.status).toBe(ServiceOrderStatus.AWAITING_APPROVAL);
+    expect(transactions.run).toHaveBeenCalledTimes(1);
+
+    const saga = sagaRepo.create.mock.calls[0][0];
+    expect(saga.orderId).toBe('so-1');
+    expect(saga.step).toBe(SagaStep.BUDGET_CREATION);
+    expect(saga.status).toBe(SagaStatus.RUNNING);
+
+    const [, messages] = repo.update.mock.calls[0];
+    expect(messages).toHaveLength(1);
+    expect(messages![0]).toMatchObject({
+      exchange: 'saga.commands',
+      routingKey: 'billing.budget.create',
+      envelope: {
+        sagaId: saga.id,
+        orderId: 'so-1',
+        type: 'billing.budget.create',
+        payload: {
+          customer: { id: 'c-1', name: 'Jane Doe', email: 'jane@example.com' },
+          vehiclePlate: 'ABC1D23',
+          totalAmount: '0.00',
+        },
+      },
+    });
+    expect(sagaRepo.appendLog).toHaveBeenCalledWith(
+      expect.objectContaining({ sagaId: saga.id, outcome: 'STARTED' }),
+    );
+    expect(emailService.sendServiceOrderStatusUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ status: ServiceOrderStatus.AWAITING_APPROVAL }),
+    );
   });
 
   it('should throw when order not found', async () => {
@@ -262,36 +363,8 @@ describe('RequestApprovalUseCase', () => {
     await expect(
       new RequestApprovalUseCase(
         repo,
-        makeEmailService(),
-        makeMetrics(),
-        makeLogger(),
-      ).execute('missing'),
-    ).rejects.toThrow(NotFoundException);
-  });
-});
-
-describe('ApproveOrderUseCase', () => {
-  it('should approve an order awaiting approval', async () => {
-    const repo = makeOrderRepo();
-    const order = makeOrder(ServiceOrderStatus.AWAITING_APPROVAL);
-    repo.findById.mockResolvedValue(order);
-    repo.update.mockImplementation(async (o) => o);
-
-    const result = await new ApproveOrderUseCase(
-      repo,
-      makeEmailService(),
-      makeMetrics(),
-      makeLogger(),
-    ).execute('so-1');
-    expect(result.status).toBe(ServiceOrderStatus.IN_PROGRESS);
-  });
-
-  it('should throw when order not found', async () => {
-    const repo = makeOrderRepo();
-    repo.findById.mockResolvedValue(null);
-    await expect(
-      new ApproveOrderUseCase(
-        repo,
+        makeSagaRepo(),
+        makeTransactions(),
         makeEmailService(),
         makeMetrics(),
         makeLogger(),
@@ -352,22 +425,13 @@ describe('AddServiceToOrderUseCase', () => {
   });
 });
 
-describe('CompleteOrderUseCase → DeliverOrderUseCase pipeline', () => {
-  it('should complete then deliver an order', async () => {
+describe('DeliverOrderUseCase', () => {
+  // COMPLETED agora vem do evento execution.job.completed (saga).
+  it('should deliver a completed order', async () => {
     const repo = makeOrderRepo();
-    const order = makeOrder(ServiceOrderStatus.IN_PROGRESS);
-    repo.findById.mockResolvedValue(order);
+    repo.findById.mockResolvedValue(makeOrder(ServiceOrderStatus.COMPLETED));
     repo.update.mockImplementation(async (o) => o);
 
-    const completed = await new CompleteOrderUseCase(
-      repo,
-      makeEmailService(),
-      makeMetrics(),
-      makeLogger(),
-    ).execute('so-1');
-    expect(completed.status).toBe(ServiceOrderStatus.COMPLETED);
-
-    repo.findById.mockResolvedValue(order);
     const delivered = await new DeliverOrderUseCase(
       repo,
       makeEmailService(),
@@ -527,6 +591,35 @@ describe('AddPartToOrderUseCase', () => {
       useCase.execute('so-1', { partId: 'p-1', quantity: 10 }),
     ).rejects.toThrow(InsufficientStockException);
   });
+
+  // A baixa acontece na aprovação do orçamento (saga), não aqui.
+  it('should add the part without touching the stock', async () => {
+    const orderRepo = makeOrderRepo();
+    orderRepo.findById.mockResolvedValue(makeOrder());
+    orderRepo.update.mockImplementation(async (o) => o);
+    const partRepo = makePartRepo();
+    const part = PartEntity.create(
+      {
+        name: 'Filtro',
+        code: 'F-001',
+        price: 25,
+        stockQuantity: 5,
+        minStockQuantity: 1,
+      },
+      'p-1',
+    );
+    partRepo.findById.mockResolvedValue(part);
+
+    const result = await new AddPartToOrderUseCase(
+      orderRepo,
+      partRepo as any,
+      makeLogger(),
+    ).execute('so-1', { partId: 'p-1', quantity: 2 });
+
+    expect(result.parts).toHaveLength(1);
+    expect(part.stockQuantity).toBe(5);
+    expect(partRepo.update).not.toHaveBeenCalled();
+  });
 });
 
 describe('TrackServiceOrderUseCase', () => {
@@ -611,75 +704,5 @@ describe('GetAverageExecutionTimeUseCase', () => {
     expect(result.byService).toHaveLength(1);
     expect(result.byService[0].serviceId).toBe('s-1');
     expect(result.byService[0].averageMinutes).toBe(120);
-  });
-});
-
-describe('ProcessBudgetDecisionUseCase', () => {
-  it('should approve the order when decision is APPROVED', async () => {
-    const repo = makeOrderRepo();
-    const emailService = makeEmailService();
-    const order = makeOrder(ServiceOrderStatus.AWAITING_APPROVAL);
-    repo.findByOrderNumber.mockResolvedValue(order);
-    repo.update.mockImplementation(async (o) => o);
-
-    const result = await new ProcessBudgetDecisionUseCase(
-      repo,
-      emailService,
-      makeMetrics(),
-      makeLogger(),
-    ).execute('OS001', { decision: BudgetDecision.APPROVED });
-
-    expect(result.status).toBe(ServiceOrderStatus.IN_PROGRESS);
-    expect(emailService.sendServiceOrderStatusUpdate).toHaveBeenCalledWith({
-      to: 'jane@example.com',
-      customerName: 'Jane Doe',
-      orderNumber: 'OS001',
-      status: ServiceOrderStatus.IN_PROGRESS,
-    });
-  });
-
-  it('should cancel the order when decision is REJECTED', async () => {
-    const repo = makeOrderRepo();
-    const order = makeOrder(ServiceOrderStatus.AWAITING_APPROVAL);
-    repo.findByOrderNumber.mockResolvedValue(order);
-    repo.update.mockImplementation(async (o) => o);
-
-    const result = await new ProcessBudgetDecisionUseCase(
-      repo,
-      makeEmailService(),
-      makeMetrics(),
-      makeLogger(),
-    ).execute('OS001', { decision: BudgetDecision.REJECTED });
-
-    expect(result.status).toBe(ServiceOrderStatus.CANCELED);
-  });
-
-  it('should throw NotFoundException when order number does not exist', async () => {
-    const repo = makeOrderRepo();
-    repo.findByOrderNumber.mockResolvedValue(null);
-
-    await expect(
-      new ProcessBudgetDecisionUseCase(
-        repo,
-        makeEmailService(),
-        makeMetrics(),
-        makeLogger(),
-      ).execute('OS-NOTFOUND', { decision: BudgetDecision.APPROVED }),
-    ).rejects.toThrow(NotFoundException);
-  });
-
-  it('should propagate InvalidStatusTransitionException when order is not awaiting approval', async () => {
-    const repo = makeOrderRepo();
-    const order = makeOrder(ServiceOrderStatus.RECEIVED);
-    repo.findByOrderNumber.mockResolvedValue(order);
-
-    await expect(
-      new ProcessBudgetDecisionUseCase(
-        repo,
-        makeEmailService(),
-        makeMetrics(),
-        makeLogger(),
-      ).execute('OS001', { decision: BudgetDecision.APPROVED }),
-    ).rejects.toThrow();
   });
 });

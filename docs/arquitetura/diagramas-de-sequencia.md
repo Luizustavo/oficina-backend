@@ -125,7 +125,6 @@ sequenceDiagram
     participant Z as Lambda authorizer
     participant C as ServiceOrdersController
     participant UC as CreateServiceOrderUseCase
-    participant CR as CustomerRepository
     participant VR as VehicleRepository
     participant E as ServiceOrderEntity
     participant OR as ServiceOrderRepository
@@ -198,13 +197,13 @@ O caso de uso nunca conhece HTTP — lança exceção de domínio, e a traduçã
 
 ## 3. Transição de status, com notificação
 
-Mostra por que a falha de e-mail não derruba a operação.
+Mostra por que a falha de e-mail não derruba a operação. O exemplo é a entrega (`COMPLETED → DELIVERED`), que continua sendo uma transição direta da equipe. As transições da saga (aprovação, pagamento, execução) chegam por eventos e estão nos diagramas do [contrato de mensagens](contratos-de-mensagens.md); nelas o e-mail sai **depois do commit** da transação do evento.
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor U as Mecânico
-    participant UC as ApproveOrderUseCase
+    participant UC as DeliverOrderUseCase
     participant OR as ServiceOrderRepository
     participant VO as ServiceOrderStatusVO
     participant M as ServiceOrderMetrics
@@ -217,8 +216,8 @@ sequenceDiagram
     UC->>OR: findById
     OR-->>UC: ordem
 
-    Note over UC: Lê status e updatedAt ANTES de mutar:<br/>approve() sobrescreve os dois
-    UC->>VO: transitionTo(IN_PROGRESS)
+    Note over UC: Lê status e updatedAt ANTES de mutar:<br/>deliver() sobrescreve os dois
+    UC->>VO: transitionTo(DELIVERED)
     alt transição inválida
         VO-->>UC: InvalidStatusTransitionException
         UC-->>U: 422
@@ -228,10 +227,10 @@ sequenceDiagram
     UC->>OR: update(order)
     OR-->>UC: ordem atualizada
 
-    UC->>M: recordTransition(AWAITING_APPROVAL → IN_PROGRESS,<br/>since: updatedAt anterior)
+    UC->>M: recordTransition(COMPLETED → DELIVERED,<br/>since: updatedAt anterior)
     Note over M: O histograma de duração vira o painel<br/>de tempo médio por status
 
-    UC->>CR: findById(customerId)
+    Note over UC: Nome e e-mail gravados na OS na abertura:<br/>nenhuma consulta à tabela de clientes
     UC->>EM: sendServiceOrderStatusUpdate(...)
     EM->>R: POST /emails
 
@@ -258,22 +257,26 @@ Aplicada pelo `ServiceOrderStatusVO`, no domínio.
 stateDiagram-v2
     [*] --> RECEIVED: abertura
     RECEIVED --> IN_DIAGNOSIS
-    IN_DIAGNOSIS --> AWAITING_APPROVAL: orçamento pronto
-    AWAITING_APPROVAL --> IN_PROGRESS: cliente aprova
-    IN_PROGRESS --> COMPLETED
-    COMPLETED --> DELIVERED
+    IN_DIAGNOSIS --> AWAITING_APPROVAL: pedido de aprovação (início da saga)
+    AWAITING_APPROVAL --> IN_DIAGNOSIS: compensação: orçamento não pôde ser gerado
+    AWAITING_APPROVAL --> AWAITING_PAYMENT: cliente aprova (Billing)
+    AWAITING_PAYMENT --> PAID: pagamento confirmado (Mercado Pago)
+    PAID --> IN_PROGRESS: reparo começou (Execution)
+    IN_PROGRESS --> COMPLETED: reparo terminou (Execution)
+    COMPLETED --> DELIVERED: entrega
     DELIVERED --> [*]
 
     RECEIVED --> CANCELED
     IN_DIAGNOSIS --> CANCELED
-    AWAITING_APPROVAL --> CANCELED: cliente recusa
-    IN_PROGRESS --> CANCELED
-    COMPLETED --> CANCELED
+    AWAITING_APPROVAL --> CANCELED: recusa ou prazo vencido
+    AWAITING_PAYMENT --> CANCELED: pagamento recusado ou vencido
+    PAID --> CANCELED: cancelamento (com estorno)
+    IN_PROGRESS --> CANCELED: falha na execução (com estorno)
     CANCELED --> [*]
 
-    note right of DELIVERED
-        Único estado do qual não se cancela:
-        o carro já saiu da oficina.
+    note right of COMPLETED
+        Serviço executado não se cancela:
+        se entrega.
     end note
 ```
 

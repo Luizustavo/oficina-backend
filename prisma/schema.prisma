@@ -129,6 +129,7 @@ model ServiceOrder {
   vehicle  Vehicle               @relation(fields: [vehicleId], references: [id])
   services ServiceOrderService[]
   parts    ServiceOrderPart[]
+  sagas    SagaInstance[]
 
   // O Postgres não cria índice em coluna de chave estrangeira automaticamente.
   @@index([customerId])
@@ -255,4 +256,68 @@ model ProcessedMessage {
   processedAt DateTime @default(now())
 
   @@map("processed_messages")
+}
+
+enum SagaStatus {
+  RUNNING
+  COMPLETED
+  COMPENSATING
+  COMPENSATED
+  FAILED
+}
+
+enum SagaStep {
+  BUDGET_CREATION
+  AWAITING_APPROVAL
+  AWAITING_PAYMENT
+  EXECUTION_QUEUED
+  EXECUTING
+  CANCELING_BUDGET
+  CANCELING_EXECUTION
+  REFUNDING
+  FINISHED
+}
+
+/// Saga orquestrada da OS (ADR-011). Uma por tentativa: se o orçamento não
+/// puder ser gerado, a OS volta ao diagnóstico e um novo pedido de aprovação
+/// abre outra saga. A atual é a mais recente (por isso orderId não é único).
+model SagaInstance {
+  /// Vai como `sagaId` em todas as mensagens desta saga.
+  id         String     @id
+  orderId    String
+  step       SagaStep
+  status     SagaStatus
+  /// Prazo do passo atual (aprovação, pagamento); vencido, a saga compensa.
+  deadlineAt DateTime?
+  lastError  String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  order ServiceOrder  @relation(fields: [orderId], references: [id])
+  logs  SagaStepLog[]
+
+  // Saga atual da OS: a mais recente.
+  @@index([orderId, createdAt])
+  // Varredura de prazos vencidos (sagas em andamento com deadline).
+  @@index([status, deadlineAt])
+  @@map("saga_instances")
+}
+
+/// Histórico da saga, um evento por linha (tabela e não JSON, como na ADR-008).
+model SagaStepLog {
+  id        String   @id @default(uuid())
+  sagaId    String
+  /// Passo em que a saga ficou depois do evento.
+  step      SagaStep
+  eventType String
+  messageId String?
+  /// STARTED, APPLIED, IGNORED_STALE ou IGNORED_FINISHED.
+  outcome   String
+  detail    String?
+  createdAt DateTime @default(now())
+
+  saga SagaInstance @relation(fields: [sagaId], references: [id], onDelete: Cascade)
+
+  @@index([sagaId, createdAt])
+  @@map("saga_step_logs")
 }

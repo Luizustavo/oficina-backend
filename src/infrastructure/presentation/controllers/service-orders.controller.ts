@@ -1,6 +1,5 @@
 import {
   CreateServiceOrderRequestDto,
-  BudgetDecisionRequestDto,
   AddServiceRequestDto,
   AddPartRequestDto,
 } from '@application/dtos/request/service-order.dto';
@@ -17,7 +16,6 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ListServiceOrdersByCustomerUseCase } from '@application/use-cases/service-order/list-service-orders-by-customer.use-case';
 import { ListServiceOrdersByStatusUseCase } from '@application/use-cases/service-order/list-service-orders-by-status.use-case';
 import { GetAverageExecutionTimeUseCase } from '@application/use-cases/service-order/get-average-execution-time.use-case';
-import { ProcessBudgetDecisionUseCase } from '@application/use-cases/service-order/process-budget-decision.use-case';
 import { CreateServiceOrderUseCase } from '@application/use-cases/service-order/create-service-order.use-case';
 import { ListServiceOrdersUseCase } from '@application/use-cases/service-order/list-service-orders.use-case';
 import { AddServiceToOrderUseCase } from '@application/use-cases/service-order/add-service-to-order.use-case';
@@ -26,8 +24,6 @@ import { GetServiceOrderUseCase } from '@application/use-cases/service-order/get
 import { RequestApprovalUseCase } from '@application/use-cases/service-order/request-approval.use-case';
 import { AddPartToOrderUseCase } from '@application/use-cases/service-order/add-part-to-order.use-case';
 import { StartDiagnosisUseCase } from '@application/use-cases/service-order/start-diagnosis.use-case';
-import { CompleteOrderUseCase } from '@application/use-cases/service-order/complete-order.use-case';
-import { ApproveOrderUseCase } from '@application/use-cases/service-order/approve-order.use-case';
 import { DeliverOrderUseCase } from '@application/use-cases/service-order/deliver-order.use-case';
 import { CancelOrderUseCase } from '@application/use-cases/service-order/cancel-order.use-case';
 import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
@@ -45,9 +41,7 @@ export class ServiceOrdersController {
     private readonly requestApproval: RequestApprovalUseCase,
     private readonly listByCustomer: ListServiceOrdersByCustomerUseCase,
     private readonly startDiagnosis: StartDiagnosisUseCase,
-    private readonly completeOrder: CompleteOrderUseCase,
     private readonly deliverOrder: DeliverOrderUseCase,
-    private readonly approveOrder: ApproveOrderUseCase,
     private readonly listByStatus: ListServiceOrdersByStatusUseCase,
     private readonly cancelOrder: CancelOrderUseCase,
     private readonly createOrder: CreateServiceOrderUseCase,
@@ -56,7 +50,6 @@ export class ServiceOrdersController {
     private readonly addService: AddServiceToOrderUseCase,
     private readonly getOrder: GetServiceOrderUseCase,
     private readonly addPart: AddPartToOrderUseCase,
-    private readonly processBudgetDecision: ProcessBudgetDecisionUseCase,
   ) {}
 
   @Post()
@@ -104,19 +97,6 @@ export class ServiceOrdersController {
     return this.trackOrder.execute(orderNumber);
   }
 
-  @Patch('track/:orderNumber/budget-decision')
-  @Public()
-  @ApiOperation({
-    summary:
-      'Receive an external budget approval/rejection notification (public webhook, no auth required)',
-  })
-  async budgetDecisionHandler(
-    @Param('orderNumber') orderNumber: string,
-    @Body() dto: BudgetDecisionRequestDto,
-  ) {
-    return this.processBudgetDecision.execute(orderNumber, dto);
-  }
-
   @Get('metrics/average-execution-time')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Average execution time per service (admin only)' })
@@ -143,7 +123,10 @@ export class ServiceOrdersController {
 
   @Patch(':id/parts')
   @Roles(UserRole.ADMIN, UserRole.MECHANIC)
-  @ApiOperation({ summary: 'Add part to order (decrements stock)' })
+  @ApiOperation({
+    summary:
+      'Add part to order (checks stock; stock is reserved when the budget is approved)',
+  })
   async addPartHandler(
     @Param('id') id: string,
     @Body() dto: AddPartRequestDto,
@@ -160,23 +143,12 @@ export class ServiceOrdersController {
 
   @Patch(':id/request-approval')
   @Roles(UserRole.ADMIN, UserRole.MECHANIC)
-  @ApiOperation({ summary: 'Transition: IN_DIAGNOSIS → AWAITING_APPROVAL' })
+  @ApiOperation({
+    summary:
+      'Transition: IN_DIAGNOSIS → AWAITING_APPROVAL. Starts the saga: the Billing Service generates the budget, and approval, payment and execution then advance the order through events',
+  })
   async requestApprovalHandler(@Param('id') id: string) {
     return this.requestApproval.execute(id);
-  }
-
-  @Patch(':id/approve')
-  @Roles(UserRole.ADMIN, UserRole.MECHANIC)
-  @ApiOperation({ summary: 'Transition: AWAITING_APPROVAL → IN_PROGRESS' })
-  async approveHandler(@Param('id') id: string) {
-    return this.approveOrder.execute(id);
-  }
-
-  @Patch(':id/complete')
-  @Roles(UserRole.ADMIN, UserRole.MECHANIC)
-  @ApiOperation({ summary: 'Transition: IN_PROGRESS → COMPLETED' })
-  async completeHandler(@Param('id') id: string) {
-    return this.completeOrder.execute(id);
   }
 
   @Patch(':id/deliver')
@@ -188,7 +160,10 @@ export class ServiceOrdersController {
 
   @Patch(':id/cancel')
   @Roles(UserRole.ADMIN, UserRole.MECHANIC)
-  @ApiOperation({ summary: 'Transition: any → CANCELED' })
+  @ApiOperation({
+    summary:
+      'Transition: any status before COMPLETED → CANCELED. With a saga running, the saga compensates the current step (cancels the budget, returns the parts, cancels the job, refunds the payment)',
+  })
   async cancelHandler(@Param('id') id: string) {
     return this.cancelOrder.execute(id);
   }
