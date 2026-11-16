@@ -75,3 +75,15 @@ export class InvalidMessageException extends DomainException {
     this.name = 'InvalidMessageException';
   }
 }
+
+/**
+ * Evento da saga que chegou antes da hora (ex.: `job.completed` antes de
+ * `job.started`). Não é erro do evento: o consumidor manda para a
+ * retentativa, e quando o anterior chegar ele passa a ser válido (ADR-011).
+ */
+export class SagaEventOutOfOrderException extends DomainException {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SagaEventOutOfOrderException';
+  }
+}

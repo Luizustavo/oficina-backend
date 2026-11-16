@@ -193,19 +193,6 @@ export class ServiceOrderEntity {
     this.props.updatedAt = new Date();
   }
 
-  /**
-   * TEMPORÁRIO (Fase 3): aprovação direta, AWAITING_APPROVAL → IN_PROGRESS,
-   * usada pelas rotas de aprovação que saem do OS Service na etapa 4.2.
-   * Remover junto com elas; na Fase 4 a aprovação é `approveBudget()`.
-   */
-  approve(): void {
-    this.statusVO = this.statusVO.transitionTo(ServiceOrderStatus.IN_PROGRESS);
-    this.props.status = this.statusVO.getValue();
-    this.props.approvedAt = new Date();
-    this.props.startedAt = new Date();
-    this.props.updatedAt = new Date();
-  }
-
   complete(): void {
     this.statusVO = this.statusVO.transitionTo(ServiceOrderStatus.COMPLETED);
     this.props.status = this.statusVO.getValue();

@@ -25,11 +25,14 @@ describe('ServiceOrderStatusVO', () => {
       );
     });
 
-    it('should allow AWAITING_APPROVAL → IN_PROGRESS', () => {
+    // A aprovação direta da Fase 3 saiu: agora passa pelo pagamento (saga).
+    it('should not allow AWAITING_APPROVAL → IN_PROGRESS', () => {
       const status = new ServiceOrderStatusVO(
         ServiceOrderStatus.AWAITING_APPROVAL,
       );
-      expect(status.canTransitionTo(ServiceOrderStatus.IN_PROGRESS)).toBe(true);
+      expect(status.canTransitionTo(ServiceOrderStatus.IN_PROGRESS)).toBe(
+        false,
+      );
     });
 
     it('should allow IN_PROGRESS → COMPLETED', () => {

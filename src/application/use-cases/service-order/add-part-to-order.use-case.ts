@@ -59,9 +59,9 @@ export class AddPartToOrderUseCase {
       totalPrice: Math.round(part.price * dto.quantity * 100) / 100,
     });
 
-    part.decrementStock(dto.quantity);
-
-    await this.partRepository.update(part);
+    // Só confere o estoque: a baixa acontece quando o orçamento é aprovado,
+    // e a devolução é compensação da saga (ADR-011, "A reserva de peças é
+    // local e acontece na aprovação").
     const updated = await this.orderRepository.update(order);
 
     this.logger.log(

@@ -28,10 +28,6 @@ const VALID_TRANSITIONS: Record<ServiceOrderStatus, ServiceOrderStatus[]> = {
     ServiceOrderStatus.AWAITING_PAYMENT,
     // Compensação da saga: o Billing não conseguiu gerar o orçamento.
     ServiceOrderStatus.IN_DIAGNOSIS,
-    // TEMPORÁRIO (Fase 3): aprovação direta pela rota PATCH /approve, que
-    // sai do OS Service quando a decisão de orçamento passar para o Billing
-    // (etapa 4.2 do PLANO-FASE-4). Remover junto com a rota.
-    ServiceOrderStatus.IN_PROGRESS,
     ServiceOrderStatus.CANCELED,
   ],
   [ServiceOrderStatus.AWAITING_PAYMENT]: [

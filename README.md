@@ -388,9 +388,19 @@ RECEIVED → IN_DIAGNOSIS → AWAITING_APPROVAL → AWAITING_PAYMENT → PAID �
 CANCELED: de qualquer estado anterior a COMPLETED
 ```
 
-Na Fase 4 a OS segue a saga da ADR-011: o orçamento é aprovado no Billing, o cliente paga pelo Mercado Pago e só então o Execution executa o reparo. A cada transição, o cliente recebe um e-mail automático, enviado para o e-mail gravado na OS no momento da abertura.
+Na Fase 4 a OS segue a **saga orquestrada** da ADR-011. A equipe conduz a OS até o pedido de aprovação; dali em diante, quem avança a OS são os eventos dos outros serviços:
 
-**Transição em andamento:** enquanto a decisão de orçamento não passa para o Billing (etapa 4.2 do plano), a aprovação direta da Fase 3, `AWAITING_APPROVAL → IN_PROGRESS`, continua disponível pelas rotas `PATCH /service-orders/:id/approve` e `PATCH /service-orders/track/:orderNumber/budget-decision`.
+| Quem | O que faz | Status da OS |
+|---|---|---|
+| Equipe | `PATCH /service-orders/:id/request-approval`: inicia a saga e pede o orçamento ao Billing | `AWAITING_APPROVAL` |
+| Billing Service | Cliente aprova o orçamento (`billing.budget.approved`); as peças são reservadas no estoque | `AWAITING_PAYMENT` |
+| Billing Service | Mercado Pago confirma o pagamento (`billing.payment.confirmed`); o OS manda o job para o Execution | `PAID` |
+| Execution Service | Mecânico começa e termina o reparo (`execution.job.started` / `completed`) | `IN_PROGRESS` → `COMPLETED` |
+| Equipe | `PATCH /service-orders/:id/deliver` | `DELIVERED` |
+
+Se algo falhar (orçamento recusado, pagamento recusado ou vencido, falha na execução), a saga compensa sozinha: cancela o orçamento, devolve as peças ao estoque e, se a OS já foi paga, pede o estorno. O cancelamento pela equipe (`PATCH /service-orders/:id/cancel`) também passa pela saga. As rotas de aprovação e de conclusão da Fase 3 (`/approve`, `/complete` e `/track/:orderNumber/budget-decision`) foram removidas: a aprovação acontece no Billing e a conclusão vem do Execution.
+
+A cada transição, o cliente recebe um e-mail automático, enviado para o e-mail gravado na OS no momento da abertura.
 
 ---
 

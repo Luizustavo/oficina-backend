@@ -1,11 +1,6 @@
-import { IsEnum, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-
-export enum BudgetDecision {
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
-}
 
 export class CreateServiceOrderRequestDto {
   @ApiProperty({ example: 'uuid-do-cliente' })
@@ -62,10 +57,4 @@ export class AddPartRequestDto {
   @Type(() => Number)
   @Min(1)
   quantity!: number;
-}
-
-export class BudgetDecisionRequestDto {
-  @ApiProperty({ enum: BudgetDecision, example: BudgetDecision.APPROVED })
-  @IsEnum(BudgetDecision)
-  decision!: BudgetDecision;
 }
