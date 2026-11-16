@@ -38,7 +38,9 @@ kubectl apply -f configmap.yaml
 cp secret.example.yaml secret.yaml
 # edite secret.yaml: DATABASE_URL (terraform output -raw database_url em /infra,
 # já vem com ?sslmode=no-verify — obrigatório, a RDS força SSL),
-# JWT_SECRET e JWT_REFRESH_SECRET (openssl rand -hex 32), RESEND_API_KEY
+# JWT_SECRET e JWT_REFRESH_SECRET (openssl rand -hex 32), RESEND_API_KEY e
+# RABBITMQ_URL (senha do usuário oficina do RabbitMQ: a mesma do secret
+# RABBITMQ_PASSWORD do oficina-infra-k8s; ver o comentário no secret.example.yaml)
 kubectl apply -f secret.yaml
 ```
 

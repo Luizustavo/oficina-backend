@@ -114,8 +114,27 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
+      # Broker dos testes de mensageria (outbox, consumidor idempotente,
+      # retentativa e DLQ). A senha é o id da execução: descartável e sem
+      # credencial fixa no código.
+      rabbitmq:
+        image: rabbitmq:4.1
+        env:
+          RABBITMQ_DEFAULT_USER: ci
+          RABBITMQ_DEFAULT_PASS: ci-${{ github.run_id }}
+        ports:
+          - 5672:5672
+        # Roda como o usuário do RabbitMQ (999): como root, a imagem 4.1 de
+        # 11/11/2026 cria o .erlang.cookie sem permissão de leitura para ele.
+        options: >-
+          --user 999:999
+          --health-cmd="rabbitmq-diagnostics -q ping"
+          --health-interval=10s
+          --health-timeout=10s
+          --health-retries=12
     env:
       DATABASE_URL: postgresql://oficina_user@localhost:5432/oficina_test_db
+      RABBITMQ_URL: amqp://ci:ci-${{ github.run_id }}@localhost:5672
       JWT_SECRET: ci-secret
       JWT_EXPIRES_IN: 15m
       JWT_REFRESH_SECRET: ci-refresh-secret

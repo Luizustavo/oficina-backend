@@ -4,6 +4,7 @@ import { CustomersModule } from './infrastructure/presentation/modules/customers
 import { VehiclesModule } from './infrastructure/presentation/modules/vehicles.module';
 import { ServicesModule } from './infrastructure/presentation/modules/services.module';
 import { PrismaModule } from './infrastructure/database/prisma/prisma.module';
+import { MessagingModule } from './infrastructure/messaging/messaging.module';
 import { JwtAuthGuard } from './infrastructure/presentation/guards/jwt-auth.guard';
 import { PartsModule } from './infrastructure/presentation/modules/parts.module';
 import { AuthModule } from './infrastructure/presentation/modules/auth.module';
@@ -24,6 +25,7 @@ import { Module } from '@nestjs/common';
     VehiclesModule,
     ServicesModule,
     PrismaModule,
+    MessagingModule,
     PartsModule,
     AuthModule,
   ],
