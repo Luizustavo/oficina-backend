@@ -9,6 +9,8 @@ const STATUS_LABELS: Record<ServiceOrderStatus, string> = {
   [ServiceOrderStatus.RECEIVED]: 'Recebida',
   [ServiceOrderStatus.IN_DIAGNOSIS]: 'Em Diagnóstico',
   [ServiceOrderStatus.AWAITING_APPROVAL]: 'Aguardando Aprovação',
+  [ServiceOrderStatus.AWAITING_PAYMENT]: 'Aguardando Pagamento',
+  [ServiceOrderStatus.PAID]: 'Pagamento Confirmado',
   [ServiceOrderStatus.IN_PROGRESS]: 'Em Execução',
   [ServiceOrderStatus.COMPLETED]: 'Finalizada',
   [ServiceOrderStatus.DELIVERED]: 'Entregue',

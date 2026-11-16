@@ -39,10 +39,9 @@ export class CreateServiceOrderUseCase {
       `Creating service order for customer: ${dto.customerId}, vehicle: ${dto.vehicleId}`,
     );
 
-    const customerExists = await this.customerRepository.existsById(
-      dto.customerId,
-    );
-    if (!customerExists) {
+    // findById, e não existsById: nome e e-mail ficam gravados na OS.
+    const customer = await this.customerRepository.findById(dto.customerId);
+    if (!customer) {
       this.logger.warn(
         `Attempt to create service order for missing customer: ${dto.customerId}`,
       );
@@ -70,6 +69,11 @@ export class CreateServiceOrderUseCase {
         orderNumber: generateOrderNumber(),
         customerId: dto.customerId,
         vehicleId: dto.vehicleId,
+        // Única leitura de cliente e veículo da OS: daqui em diante as
+        // notificações e a saga usam estes dados gravados.
+        customerName: customer.name,
+        customerEmail: customer.email,
+        vehiclePlate: vehicle.licensePlate,
         problemDescription: dto.problemDescription,
         notes: dto.notes,
       },

@@ -68,7 +68,7 @@ export class ServiceOrdersController {
   @Get()
   @ApiOperation({
     summary:
-      'List service orders (paginated). Without a status filter, orders are sorted by priority (IN_PROGRESS > AWAITING_APPROVAL > IN_DIAGNOSIS > RECEIVED, oldest first) and COMPLETED/DELIVERED orders are excluded',
+      'List service orders (paginated). Without a status filter, orders are sorted by priority (IN_PROGRESS > PAID > AWAITING_PAYMENT > AWAITING_APPROVAL > IN_DIAGNOSIS > RECEIVED > CANCELED, oldest first) and COMPLETED/DELIVERED orders are excluded',
   })
   async list(
     @Query('page') page?: string,

@@ -2,7 +2,9 @@ export interface ServiceOrderResponseDto {
   id: string;
   orderNumber: string;
   customerId: string;
+  customerName: string;
   vehicleId: string;
+  vehiclePlate: string;
   problemDescription: string;
   status: string;
   services: object[];

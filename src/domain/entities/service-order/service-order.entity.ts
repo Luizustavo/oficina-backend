@@ -9,6 +9,11 @@ export interface ServiceOrderProps {
   orderNumber: string;
   customerId: string;
   vehicleId: string;
+  // Foto do momento da abertura: a OS notifica o cliente e conversa com os
+  // outros serviços sem consultar as tabelas de cliente e veículo.
+  customerName: string;
+  customerEmail: string;
+  vehiclePlate: string;
   problemDescription: string;
   status: ServiceOrderStatus;
   services: ServiceItem[];
@@ -27,6 +32,11 @@ export interface CreateServiceOrderProps {
   orderNumber: string;
   customerId: string;
   vehicleId: string;
+  // Foto do momento da abertura: a OS notifica o cliente e conversa com os
+  // outros serviços sem consultar as tabelas de cliente e veículo.
+  customerName: string;
+  customerEmail: string;
+  vehiclePlate: string;
   problemDescription: string;
   notes?: string;
 }
@@ -57,6 +67,12 @@ export class ServiceOrderEntity {
     }
     if (!props.vehicleId) {
       throw new DomainException('Vehicle ID is required');
+    }
+    if (!props.customerName?.trim() || !props.customerEmail?.trim()) {
+      throw new DomainException('Customer name and email are required');
+    }
+    if (!props.vehiclePlate?.trim()) {
+      throw new DomainException('Vehicle plate is required');
     }
 
     const now = new Date();
@@ -138,6 +154,50 @@ export class ServiceOrderEntity {
     this.props.updatedAt = new Date();
   }
 
+  // --- Transições da saga (ADR-011), disparadas por eventos do Billing e do
+  // Execution. ---
+
+  /** Orçamento aprovado pelo cliente no Billing: falta o pagamento. */
+  approveBudget(): void {
+    this.statusVO = this.statusVO.transitionTo(
+      ServiceOrderStatus.AWAITING_PAYMENT,
+    );
+    this.props.status = this.statusVO.getValue();
+    this.props.approvedAt = new Date();
+    this.props.updatedAt = new Date();
+  }
+
+  /** Pagamento confirmado pelo Mercado Pago (via Billing). */
+  confirmPayment(): void {
+    this.statusVO = this.statusVO.transitionTo(ServiceOrderStatus.PAID);
+    this.props.status = this.statusVO.getValue();
+    this.props.updatedAt = new Date();
+  }
+
+  /** Execution começou o reparo de uma OS paga. */
+  startExecution(): void {
+    this.statusVO = this.statusVO.transitionTo(ServiceOrderStatus.IN_PROGRESS);
+    this.props.status = this.statusVO.getValue();
+    this.props.startedAt = new Date();
+    this.props.updatedAt = new Date();
+  }
+
+  /**
+   * Compensação: o Billing não conseguiu gerar o orçamento, então a OS volta
+   * para o diagnóstico em vez de ficar parada aguardando uma aprovação que
+   * nunca vai chegar.
+   */
+  revertToDiagnosis(): void {
+    this.statusVO = this.statusVO.transitionTo(ServiceOrderStatus.IN_DIAGNOSIS);
+    this.props.status = this.statusVO.getValue();
+    this.props.updatedAt = new Date();
+  }
+
+  /**
+   * TEMPORÁRIO (Fase 3): aprovação direta, AWAITING_APPROVAL → IN_PROGRESS,
+   * usada pelas rotas de aprovação que saem do OS Service na etapa 4.2.
+   * Remover junto com elas; na Fase 4 a aprovação é `approveBudget()`.
+   */
   approve(): void {
     this.statusVO = this.statusVO.transitionTo(ServiceOrderStatus.IN_PROGRESS);
     this.props.status = this.statusVO.getValue();
@@ -177,6 +237,15 @@ export class ServiceOrderEntity {
   }
   get vehicleId(): string {
     return this.props.vehicleId;
+  }
+  get customerName(): string {
+    return this.props.customerName;
+  }
+  get customerEmail(): string {
+    return this.props.customerEmail;
+  }
+  get vehiclePlate(): string {
+    return this.props.vehiclePlate;
   }
   get problemDescription(): string {
     return this.props.problemDescription;

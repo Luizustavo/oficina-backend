@@ -64,6 +64,52 @@ describe('ServiceOrderStatusVO', () => {
     });
   });
 
+  // Fluxo da saga (ADR-011): aprovado → aguardando pagamento → pago → execução.
+  describe('saga flow (Fase 4)', () => {
+    it.each([
+      [
+        ServiceOrderStatus.AWAITING_APPROVAL,
+        ServiceOrderStatus.AWAITING_PAYMENT,
+      ],
+      [ServiceOrderStatus.AWAITING_PAYMENT, ServiceOrderStatus.PAID],
+      [ServiceOrderStatus.PAID, ServiceOrderStatus.IN_PROGRESS],
+      // Compensação: o Billing não conseguiu gerar o orçamento.
+      [ServiceOrderStatus.AWAITING_APPROVAL, ServiceOrderStatus.IN_DIAGNOSIS],
+      [ServiceOrderStatus.AWAITING_PAYMENT, ServiceOrderStatus.CANCELED],
+      [ServiceOrderStatus.PAID, ServiceOrderStatus.CANCELED],
+    ])('should allow %s → %s', (from, to) => {
+      expect(new ServiceOrderStatusVO(from).canTransitionTo(to)).toBe(true);
+    });
+
+    it.each([
+      // Não dá para pular o pagamento nem voltar de pago para aguardando.
+      [ServiceOrderStatus.AWAITING_PAYMENT, ServiceOrderStatus.IN_PROGRESS],
+      [ServiceOrderStatus.PAID, ServiceOrderStatus.AWAITING_PAYMENT],
+      [ServiceOrderStatus.IN_DIAGNOSIS, ServiceOrderStatus.AWAITING_PAYMENT],
+      [ServiceOrderStatus.AWAITING_PAYMENT, ServiceOrderStatus.IN_DIAGNOSIS],
+      [ServiceOrderStatus.PAID, ServiceOrderStatus.COMPLETED],
+    ])('should not allow %s → %s', (from, to) => {
+      expect(new ServiceOrderStatusVO(from).canTransitionTo(to)).toBe(false);
+    });
+
+    // Serviço já executado (COMPLETED) não se cancela: se entrega.
+    it('should allow CANCELED from every status before COMPLETED', () => {
+      const terminal = [
+        ServiceOrderStatus.COMPLETED,
+        ServiceOrderStatus.DELIVERED,
+        ServiceOrderStatus.CANCELED,
+      ];
+      for (const status of Object.values(ServiceOrderStatus)) {
+        const expected = !terminal.includes(status);
+        expect(
+          new ServiceOrderStatusVO(status).canTransitionTo(
+            ServiceOrderStatus.CANCELED,
+          ),
+        ).toBe(expected);
+      }
+    });
+  });
+
   describe('transitionTo', () => {
     it('should return a new ServiceOrderStatusVO with the new status', () => {
       const status = new ServiceOrderStatusVO(ServiceOrderStatus.RECEIVED);

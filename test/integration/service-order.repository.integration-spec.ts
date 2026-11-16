@@ -92,10 +92,49 @@ describe('ServiceOrderRepository (integração)', () => {
         orderNumber: `OS-${randomUUID().slice(0, 8)}`,
         customerId: CUSTOMER_ID,
         vehicleId: VEHICLE_ID,
+        customerName: 'Jane Doe',
+        customerEmail: 'jane@example.com',
+        vehiclePlate: 'ABC1D23',
         problemDescription: 'Barulho no motor',
       },
       randomUUID(),
     );
+
+  it('persiste os status da saga (AWAITING_PAYMENT e PAID)', async () => {
+    const order = await repository.create(makeOrder());
+    order.startDiagnosis();
+    order.requestApproval();
+    order.approveBudget();
+    await repository.update(order);
+    expect((await repository.findById(order.id))?.status).toBe(
+      'AWAITING_PAYMENT',
+    );
+
+    order.confirmPayment();
+    await repository.update(order);
+    const reloaded = await repository.findById(order.id);
+    expect(reloaded?.status).toBe('PAID');
+    expect(reloaded?.approvedAt).toBeInstanceOf(Date);
+  });
+
+  it('mantém o e-mail gravado na OS quando o cliente muda o cadastro', async () => {
+    const order = await repository.create(makeOrder());
+
+    await prisma.customer.update({
+      where: { id: CUSTOMER_ID },
+      data: { email: 'novo-email@example.com' },
+    });
+
+    const reloaded = await repository.findById(order.id);
+    expect(reloaded?.customerEmail).toBe('jane@example.com');
+    expect(reloaded?.customerName).toBe('Jane Doe');
+    expect(reloaded?.vehiclePlate).toBe('ABC1D23');
+
+    await prisma.customer.update({
+      where: { id: CUSTOMER_ID },
+      data: { email: 'jane@example.com' },
+    });
+  });
 
   it('persiste e relê uma ordem com serviços e peças', async () => {
     const order = makeOrder();

@@ -23,6 +23,8 @@ enum ServiceOrderStatus {
   RECEIVED
   IN_DIAGNOSIS
   AWAITING_APPROVAL
+  AWAITING_PAYMENT
+  PAID
   IN_PROGRESS
   COMPLETED
   DELIVERED
@@ -101,6 +103,13 @@ model ServiceOrder {
   orderNumber        String             @unique
   customerId         String
   vehicleId          String
+  // Foto do momento da abertura (mesma ideia da ADR-008): com estes campos a
+  // OS manda e-mail e monta o comando de orçamento para o Billing sem
+  // consultar as tabelas de cliente e veículo. Mudar o e-mail do cliente
+  // depois não muda o destino das notificações de uma OS já aberta.
+  customerName       String
+  customerEmail      String
+  vehiclePlate       String
   problemDescription String
   status             ServiceOrderStatus @default(RECEIVED)
   // Agregado mantido na própria ordem: é a soma das duas tabelas filhas, mas

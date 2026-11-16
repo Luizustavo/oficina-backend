@@ -46,7 +46,7 @@ stateDiagram-v2
 
     note right of AWAITING_APPROVAL
       CANCELED é alcançável de qualquer
-      estado, exceto DELIVERED
+      estado anterior a COMPLETED
     end note
 ```
 

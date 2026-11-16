@@ -7,6 +7,9 @@ const validProps = {
   orderNumber: 'OS-001',
   customerId: 'customer-1',
   vehicleId: 'vehicle-1',
+  customerName: 'Maria Silva',
+  customerEmail: 'maria@exemplo.com',
+  vehiclePlate: 'ABC1D23',
   problemDescription: 'Motor fazendo barulho',
 };
 
@@ -35,6 +38,23 @@ describe('ServiceOrder', () => {
     it('should throw DomainException for missing vehicleId', () => {
       expect(() =>
         ServiceOrderEntity.create({ ...validProps, vehicleId: '' }),
+      ).toThrow(DomainException);
+    });
+
+    it('should keep the customer and vehicle data given at creation', () => {
+      const so = ServiceOrderEntity.create(validProps);
+      expect(so.customerName).toBe('Maria Silva');
+      expect(so.customerEmail).toBe('maria@exemplo.com');
+      expect(so.vehiclePlate).toBe('ABC1D23');
+    });
+
+    it.each([
+      ['customerName', ' '],
+      ['customerEmail', ''],
+      ['vehiclePlate', ''],
+    ])('should throw DomainException for empty %s', (field, value) => {
+      expect(() =>
+        ServiceOrderEntity.create({ ...validProps, [field]: value }),
       ).toThrow(DomainException);
     });
   });
@@ -103,6 +123,76 @@ describe('ServiceOrder', () => {
       so.complete();
       so.deliver();
       expect(() => so.cancel()).toThrow(InvalidStatusTransitionException);
+    });
+  });
+
+  describe('saga transitions (Fase 4)', () => {
+    const awaitingApproval = (): ServiceOrderEntity => {
+      const so = ServiceOrderEntity.create(validProps);
+      so.startDiagnosis();
+      so.requestApproval();
+      return so;
+    };
+
+    it('should go AWAITING_APPROVAL → AWAITING_PAYMENT → PAID → IN_PROGRESS', () => {
+      const so = awaitingApproval();
+
+      so.approveBudget();
+      expect(so.status).toBe(ServiceOrderStatus.AWAITING_PAYMENT);
+      expect(so.approvedAt).toBeInstanceOf(Date);
+      expect(so.startedAt).toBeUndefined();
+
+      so.confirmPayment();
+      expect(so.status).toBe(ServiceOrderStatus.PAID);
+
+      so.startExecution();
+      expect(so.status).toBe(ServiceOrderStatus.IN_PROGRESS);
+      expect(so.startedAt).toBeInstanceOf(Date);
+
+      so.complete();
+      expect(so.status).toBe(ServiceOrderStatus.COMPLETED);
+    });
+
+    it('should revert AWAITING_APPROVAL → IN_DIAGNOSIS as compensation', () => {
+      const so = awaitingApproval();
+      so.revertToDiagnosis();
+      expect(so.status).toBe(ServiceOrderStatus.IN_DIAGNOSIS);
+    });
+
+    it('should not start execution before the payment', () => {
+      const so = awaitingApproval();
+      so.approveBudget();
+      expect(() => so.startExecution()).toThrow(
+        InvalidStatusTransitionException,
+      );
+    });
+
+    it('should not confirm payment of a budget that was not approved', () => {
+      const so = awaitingApproval();
+      expect(() => so.confirmPayment()).toThrow(
+        InvalidStatusTransitionException,
+      );
+    });
+
+    it('should not revert to diagnosis after the budget was approved', () => {
+      const so = awaitingApproval();
+      so.approveBudget();
+      expect(() => so.revertToDiagnosis()).toThrow(
+        InvalidStatusTransitionException,
+      );
+    });
+
+    it('should allow canceling while awaiting payment and after payment', () => {
+      const unpaid = awaitingApproval();
+      unpaid.approveBudget();
+      unpaid.cancel();
+      expect(unpaid.status).toBe(ServiceOrderStatus.CANCELED);
+
+      const paid = awaitingApproval();
+      paid.approveBudget();
+      paid.confirmPayment();
+      paid.cancel();
+      expect(paid.status).toBe(ServiceOrderStatus.CANCELED);
     });
   });
 
