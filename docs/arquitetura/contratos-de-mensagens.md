@@ -55,6 +55,9 @@ Toda mensagem, comando ou evento, tem o mesmo envelope no corpo:
 | `delivery_mode` | `2` (persistente) |
 | header `traceparent` / `tracestate` | contexto do trace de quando a mensagem foi **gravada no outbox**, não de quando foi publicada |
 | header `x-retry-count` | número da tentativa (ausente na primeira) |
+| `mandatory` | `true`, sempre, com *publisher confirms* |
+
+**Por que `mandatory`.** Sem ele, uma mensagem para uma fila que ainda não existe (o serviço consumidor nunca subiu desde que o broker nasceu) é descartada pelo RabbitMQ e mesmo assim confirmada ao publicador. Com `mandatory`, o broker devolve a mensagem (`basic.return`) antes da confirmação. O publicador trata isso como falha, e o relay mantém a mensagem pendente no outbox até a fila existir.
 
 ---
 

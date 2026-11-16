@@ -221,3 +221,38 @@ model RefreshToken {
   @@index([expiresAt])
   @@map("refresh_tokens")
 }
+
+/// Transactional Outbox (ADR-010). A mensagem é gravada na MESMA transação da
+/// mudança de estado que a originou; o relay (OutboxRelayService) publica as
+/// pendentes no RabbitMQ e preenche `publishedAt`. Se o broker estiver fora,
+/// a mensagem espera aqui, e nada se perde.
+model OutboxMessage {
+  /// Igual ao `messageId` do envelope: a chave de idempotência dos consumidores.
+  id          String    @id
+  exchange    String
+  routingKey  String
+  /// Envelope completo da mensagem (contratos-de-mensagens.md, seção 2).
+  payload     Json
+  /// Contexto do trace no momento da gravação, para o trace atravessar o broker.
+  traceparent String?
+  tracestate  String?
+  createdAt   DateTime  @default(now())
+  publishedAt DateTime?
+
+  // O relay busca as pendentes em ordem de criação.
+  @@index([publishedAt, createdAt])
+  @@map("outbox_messages")
+}
+
+/// Consumidor idempotente (ADR-010): o `messageId` é gravado na mesma
+/// transação do efeito da mensagem. Uma reentrega encontra a linha e é
+/// confirmada sem repetir o efeito.
+model ProcessedMessage {
+  messageId   String   @id
+  /// Fila que consumiu a mensagem (hoje só `os.saga-events`).
+  queue       String
+  messageType String
+  processedAt DateTime @default(now())
+
+  @@map("processed_messages")
+}

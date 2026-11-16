@@ -7,7 +7,9 @@ import {
   PrismaServiceOrderMapper,
 } from '@infrastructure/database/prisma/mappers/prisma-service-order.mapper';
 import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
+import { PrismaOutboxMessageMapper } from '@infrastructure/database/prisma/mappers/prisma-outbox-message.mapper';
 import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
+import { OutgoingMessage } from '@domain/messaging/saga-message';
 import { ServiceOrderStatus } from '@generated/prisma/enums';
 import { PrismaService } from '@infrastructure/database/prisma/prisma.service';
 import { Injectable } from '@nestjs/common';
@@ -157,26 +159,40 @@ export class ServiceOrderRepository implements IServiceOrderRepository {
     return records.map((item) => PrismaServiceOrderMapper.toEntity(item));
   }
 
-  async update(order: ServiceOrderEntity): Promise<ServiceOrderEntity> {
-    // A entidade trabalha com a lista inteira em memória, então a forma
-    // correta de persistir é trocar os filhos por completo. O Prisma executa
-    // o deleteMany e os creates aninhados numa única transação, então não
-    // existe instante em que a ordem fique sem itens.
-    const updated = await this.prisma.serviceOrder.update({
-      where: { id: order.id },
-      data: {
-        ...PrismaServiceOrderMapper.toPrisma(order),
-        services: {
-          deleteMany: {},
-          create: PrismaServiceOrderMapper.toPrismaServices(order),
+  async update(
+    order: ServiceOrderEntity,
+    messages: OutgoingMessage[] = [],
+  ): Promise<ServiceOrderEntity> {
+    // A ordem e as mensagens do outbox vão na mesma transação (ADR-010): se
+    // uma falhar, a outra é desfeita, e nunca existe mudança de status sem a
+    // mensagem que avisa os outros serviços (nem o contrário).
+    return this.prisma.runInTransaction(async () => {
+      // A entidade trabalha com a lista inteira em memória, então a forma
+      // correta de persistir é trocar os filhos por completo, dentro da
+      // mesma transação: não existe instante em que a ordem fique sem itens.
+      const updated = await this.prisma.serviceOrder.update({
+        where: { id: order.id },
+        data: {
+          ...PrismaServiceOrderMapper.toPrisma(order),
+          services: {
+            deleteMany: {},
+            create: PrismaServiceOrderMapper.toPrismaServices(order),
+          },
+          parts: {
+            deleteMany: {},
+            create: PrismaServiceOrderMapper.toPrismaParts(order),
+          },
         },
-        parts: {
-          deleteMany: {},
-          create: PrismaServiceOrderMapper.toPrismaParts(order),
-        },
-      },
-      include: WITH_ITEMS,
+        include: WITH_ITEMS,
+      });
+      if (messages.length > 0) {
+        await this.prisma.outboxMessage.createMany({
+          data: messages.map((message) =>
+            PrismaOutboxMessageMapper.toPrisma(message),
+          ),
+        });
+      }
+      return PrismaServiceOrderMapper.toEntity(updated);
     });
-    return PrismaServiceOrderMapper.toEntity(updated);
   }
 }

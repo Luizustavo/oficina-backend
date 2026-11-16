@@ -62,3 +62,16 @@ export class BusinessRuleException extends DomainException {
     this.name = 'BusinessRuleException';
   }
 }
+
+/**
+ * Mensagem da saga que nunca vai ser processada, por mais que se tente:
+ * JSON quebrado, envelope incompleto, `type` ou `version` desconhecidos.
+ * O consumidor manda direto para a DLQ, sem retentativa
+ * (docs/arquitetura/contratos-de-mensagens.md, seção 4).
+ */
+export class InvalidMessageException extends DomainException {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidMessageException';
+  }
+}

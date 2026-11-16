@@ -4,13 +4,22 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { PrismaClient } from '@generated/prisma/client';
+import { PrismaClient, Prisma } from '@generated/prisma/client';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { PrismaPg } from '@prisma/adapter-pg';
+
+/** Tempo máximo de uma transação aberta por `runInTransaction`. */
+const TRANSACTION_TIMEOUT_MS = 15_000;
 
 @Injectable()
 export class PrismaService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
   private readonly client: PrismaClient;
+  // Transação ativa no fluxo atual (requisição, mensagem consumida, tick do
+  // relay). Os getters abaixo leem daqui, então todo repositório participa da
+  // transação aberta por `runInTransaction` sem receber nada por parâmetro.
+  private readonly transaction =
+    new AsyncLocalStorage<Prisma.TransactionClient>();
 
   constructor() {
     const adapter = new PrismaPg({
@@ -20,38 +29,72 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   }
 
   get customer() {
-    return this.client.customer;
+    return this.db.customer;
   }
   get vehicle() {
-    return this.client.vehicle;
+    return this.db.vehicle;
   }
   get service() {
-    return this.client.service;
+    return this.db.service;
   }
   get part() {
-    return this.client.part;
+    return this.db.part;
   }
   get serviceOrder() {
-    return this.client.serviceOrder;
+    return this.db.serviceOrder;
   }
   get serviceOrderService() {
-    return this.client.serviceOrderService;
+    return this.db.serviceOrderService;
   }
   get serviceOrderPart() {
-    return this.client.serviceOrderPart;
+    return this.db.serviceOrderPart;
   }
   get user() {
-    return this.client.user;
+    return this.db.user;
   }
   get refreshToken() {
-    return this.client.refreshToken;
+    return this.db.refreshToken;
+  }
+  get outboxMessage() {
+    return this.db.outboxMessage;
+  }
+  get processedMessage() {
+    return this.db.processedMessage;
+  }
+
+  /** Cliente da transação ativa, ou o cliente normal fora de uma. */
+  private get db(): PrismaClient | Prisma.TransactionClient {
+    return this.transaction.getStore() ?? this.client;
+  }
+
+  /**
+   * Executa `fn` numa transação do banco. Tudo o que os repositórios fizerem
+   * dentro dela (inclusive gravar no outbox) é confirmado junto ou desfeito
+   * junto. Chamada dentro de outra transação, participa da mesma: é isso que
+   * deixa o consumidor gravar o efeito da mensagem e o registro de "já
+   * processada" de uma vez só, mesmo que o efeito use outros repositórios.
+   */
+  async runInTransaction<T>(fn: () => Promise<T>): Promise<T> {
+    if (this.transaction.getStore()) {
+      return fn();
+    }
+    return this.client.$transaction((tx) => this.transaction.run(tx, fn), {
+      timeout: TRANSACTION_TIMEOUT_MS,
+    });
+  }
+
+  $queryRawUnsafe<T = unknown>(
+    query: string,
+    ...values: unknown[]
+  ): Promise<T> {
+    return this.db.$queryRawUnsafe<T>(query, ...values);
   }
 
   $executeRawUnsafe(
     query: string,
     ...values: unknown[]
   ): ReturnType<PrismaClient['$executeRawUnsafe']> {
-    return this.client.$executeRawUnsafe(query, ...values);
+    return this.db.$executeRawUnsafe(query, ...values);
   }
 
   async onModuleInit(): Promise<void> {
@@ -70,6 +113,8 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     }
     const tableNames = [
       'refresh_tokens',
+      'outbox_messages',
+      'processed_messages',
       // Filhas antes das pais; o CASCADE do TRUNCATE já cobriria, mas ser
       // explícito evita surpresa se o cascade mudar.
       'service_order_services',
