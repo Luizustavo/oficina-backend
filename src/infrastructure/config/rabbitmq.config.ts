@@ -14,6 +14,10 @@ export const rabbitmqConfig = () => {
       enabled: url.length > 0,
       /** Mensagens entregues ao consumidor antes de ele confirmar as anteriores. */
       prefetch: Number(process.env.RABBITMQ_PREFETCH || 10),
+      /** Limite de cada tentativa de conexão (ver RabbitMqConnection). */
+      connectTimeoutMs: Number(
+        process.env.RABBITMQ_CONNECT_TIMEOUT_MS || 5_000,
+      ),
       /** Tempo máximo esperando a confirmação do broker em cada publicação. */
       publishTimeoutMs: Number(
         process.env.RABBITMQ_PUBLISH_TIMEOUT_MS || 5_000,
