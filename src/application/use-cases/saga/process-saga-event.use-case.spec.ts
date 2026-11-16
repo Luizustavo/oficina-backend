@@ -85,7 +85,7 @@ function setup(params: {
     update: jest.fn((order: ServiceOrderEntity) => Promise.resolve(order)),
   } as unknown as jest.Mocked<IServiceOrderRepository>;
   const sagaRepository = {
-    findCurrentByOrderId: jest.fn().mockResolvedValue(params.saga),
+    lockCurrentByOrderId: jest.fn().mockResolvedValue(params.saga),
     update: jest.fn((saga: SagaInstanceEntity) => Promise.resolve(saga)),
     appendLog: jest.fn(),
   } as unknown as jest.Mocked<ISagaRepository>;

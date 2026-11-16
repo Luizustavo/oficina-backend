@@ -46,6 +46,29 @@ export class SagaRepository implements ISagaRepository {
     return found ? PrismaSagaMapper.toEntity(found) : null;
   }
 
+  async lockCurrentByOrderId(
+    orderId: string,
+  ): Promise<SagaInstanceEntity | null> {
+    const rows = await this.prisma.$queryRawUnsafe<{ id: string }[]>(
+      `SELECT "id" FROM "saga_instances"
+      WHERE "orderId" = $1
+      ORDER BY "createdAt" DESC
+      LIMIT 1
+      FOR UPDATE`,
+      orderId,
+    );
+    return rows.length > 0 ? this.findById(rows[0].id) : null;
+  }
+
+  async findExpired(now: Date, limit: number): Promise<SagaInstanceEntity[]> {
+    const found = await this.prisma.sagaInstance.findMany({
+      where: { status: 'RUNNING', deadlineAt: { lte: now } },
+      orderBy: { deadlineAt: 'asc' },
+      take: limit,
+    });
+    return found.map((saga) => PrismaSagaMapper.toEntity(saga));
+  }
+
   async appendLog(log: SagaStepLog): Promise<void> {
     await this.prisma.sagaStepLog.create({
       data: {

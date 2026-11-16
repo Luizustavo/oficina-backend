@@ -19,3 +19,11 @@ data:
   # Redundante com o que tracing.ts já define, de propósito: permite corrigir
   # a temporalidade sem rebuildar a imagem, se algum dia o padrão mudar.
   OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE: "delta"
+  # Prazos da saga (ADR-011), em segundos. Valores de demonstração: o cliente
+  # tem 10 min para aprovar e 10 min para pagar; vencido o prazo, a saga
+  # compensa sozinha (cancela o orçamento e devolve as peças). Em produção
+  # seriam dias (padrão do código: 3 dias e 1 dia). Para gravar o cenário de
+  # timeout no vídeo, baixe para 120 e reaplique este ConfigMap.
+  SAGA_APPROVAL_TIMEOUT_SECONDS: "600"
+  SAGA_PAYMENT_TIMEOUT_SECONDS: "600"
+  SAGA_SWEEP_INTERVAL_SECONDS: "15"

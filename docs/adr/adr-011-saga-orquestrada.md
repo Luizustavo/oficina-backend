@@ -89,7 +89,7 @@ saga_step_logs
 
 `status`: `RUNNING` → `COMPLETED`, ou `RUNNING` → `COMPENSATING` → `COMPENSATED`, ou `FAILED` quando a compensação falha. O histórico fica em tabela, e não em JSON, pelo mesmo motivo da [ADR-008](adr-008-tabelas-de-juncao-no-lugar-de-json.md).
 
-**Uma transação por evento.** Ao consumir um evento, o OS faz em uma única transação do Postgres:
+**Uma transação por evento.** Ao consumir um evento, o OS faz em uma única transação do Postgres, com a linha da saga travada (`SELECT ... FOR UPDATE`) para que dois eventos da mesma saga, em réplicas diferentes ou um evento e o prazo vencendo, sejam aplicados um depois do outro:
 
 1. registra o `messageId` (idempotência);
 2. avança a saga e grava o log do passo;
@@ -102,7 +102,7 @@ Ou tudo acontece, ou nada acontece e a mensagem volta para retentativa.
 
 ### Timeouts
 
-`deadline_at` é definido ao entrar nos passos 2 e 3, a partir de `SAGA_APPROVAL_TIMEOUT` e `SAGA_PAYMENT_TIMEOUT`. Uma varredura periódica (`@nestjs/schedule`) trata sagas `RUNNING` com o prazo vencido como falha do passo. Para a demonstração, os prazos são curtos (minutos); em produção, seriam dias.
+`deadline_at` é definido ao entrar nos passos 2 e 3, a partir de `SAGA_APPROVAL_TIMEOUT` e `SAGA_PAYMENT_TIMEOUT`. Uma varredura periódica (`SagaDeadlineScheduler`, a cada `SAGA_SWEEP_INTERVAL_SECONDS`) trata sagas `RUNNING` com o prazo vencido como falha do passo, mandando o evento interno `saga.approval.timeout` ou `saga.payment.timeout`. Com várias réplicas, a trava da saga garante que o prazo é aplicado uma vez só. Para a demonstração, os prazos são curtos (minutos); em produção, seriam dias.
 
 ### Eventos fora de ordem e repetidos
 

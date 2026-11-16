@@ -20,6 +20,7 @@ import { CreateServiceOrderUseCase } from '@application/use-cases/service-order/
 import { ListServiceOrdersUseCase } from '@application/use-cases/service-order/list-service-orders.use-case';
 import { AddServiceToOrderUseCase } from '@application/use-cases/service-order/add-service-to-order.use-case';
 import { TrackServiceOrderUseCase } from '@application/use-cases/service-order/track-service-order.use-case';
+import { GetServiceOrderSagaUseCase } from '@application/use-cases/saga/get-service-order-saga.use-case';
 import { GetServiceOrderUseCase } from '@application/use-cases/service-order/get-service-order.use-case';
 import { RequestApprovalUseCase } from '@application/use-cases/service-order/request-approval.use-case';
 import { AddPartToOrderUseCase } from '@application/use-cases/service-order/add-part-to-order.use-case';
@@ -49,6 +50,7 @@ export class ServiceOrdersController {
     private readonly listOrders: ListServiceOrdersUseCase,
     private readonly addService: AddServiceToOrderUseCase,
     private readonly getOrder: GetServiceOrderUseCase,
+    private readonly getOrderSaga: GetServiceOrderSagaUseCase,
     private readonly addPart: AddPartToOrderUseCase,
   ) {}
 
@@ -109,6 +111,16 @@ export class ServiceOrdersController {
   @ApiOperation({ summary: 'Find service order by ID' })
   async findOne(@Param('id') id: string) {
     return this.getOrder.execute(id);
+  }
+
+  @CustomerScope({ order: 'id' })
+  @Get(':id/saga')
+  @ApiOperation({
+    summary:
+      'Current saga of the order: step, status, deadline, last error and the full event history',
+  })
+  async findSaga(@Param('id') id: string) {
+    return this.getOrderSaga.execute(id);
   }
 
   @Patch(':id/services')
