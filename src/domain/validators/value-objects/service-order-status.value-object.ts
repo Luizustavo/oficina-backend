@@ -4,12 +4,17 @@ export enum ServiceOrderStatus {
   RECEIVED = 'RECEIVED',
   IN_DIAGNOSIS = 'IN_DIAGNOSIS',
   AWAITING_APPROVAL = 'AWAITING_APPROVAL',
+  AWAITING_PAYMENT = 'AWAITING_PAYMENT',
+  PAID = 'PAID',
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
   DELIVERED = 'DELIVERED',
   CANCELED = 'CANCELED',
 }
 
+// Máquina de estados da Fase 4 (ADR-011): orçamento aprovado → pagamento →
+// execução. CANCELED é alcançável de qualquer estado anterior a COMPLETED:
+// serviço já executado não se cancela, se entrega.
 const VALID_TRANSITIONS: Record<ServiceOrderStatus, ServiceOrderStatus[]> = {
   [ServiceOrderStatus.RECEIVED]: [
     ServiceOrderStatus.IN_DIAGNOSIS,
@@ -20,6 +25,20 @@ const VALID_TRANSITIONS: Record<ServiceOrderStatus, ServiceOrderStatus[]> = {
     ServiceOrderStatus.CANCELED,
   ],
   [ServiceOrderStatus.AWAITING_APPROVAL]: [
+    ServiceOrderStatus.AWAITING_PAYMENT,
+    // Compensação da saga: o Billing não conseguiu gerar o orçamento.
+    ServiceOrderStatus.IN_DIAGNOSIS,
+    // TEMPORÁRIO (Fase 3): aprovação direta pela rota PATCH /approve, que
+    // sai do OS Service quando a decisão de orçamento passar para o Billing
+    // (etapa 4.2 do PLANO-FASE-4). Remover junto com a rota.
+    ServiceOrderStatus.IN_PROGRESS,
+    ServiceOrderStatus.CANCELED,
+  ],
+  [ServiceOrderStatus.AWAITING_PAYMENT]: [
+    ServiceOrderStatus.PAID,
+    ServiceOrderStatus.CANCELED,
+  ],
+  [ServiceOrderStatus.PAID]: [
     ServiceOrderStatus.IN_PROGRESS,
     ServiceOrderStatus.CANCELED,
   ],
@@ -32,8 +51,13 @@ const VALID_TRANSITIONS: Record<ServiceOrderStatus, ServiceOrderStatus[]> = {
   [ServiceOrderStatus.CANCELED]: [],
 };
 
+// Ordem da listagem sem filtro: o que está mais perto de virar trabalho na
+// oficina aparece primeiro. Status fora desta lista e de EXCLUDED não
+// aparecem na listagem, então todo status novo precisa entrar em uma das duas.
 export const SERVICE_ORDER_LIST_STATUS_PRIORITY: ServiceOrderStatus[] = [
   ServiceOrderStatus.IN_PROGRESS,
+  ServiceOrderStatus.PAID,
+  ServiceOrderStatus.AWAITING_PAYMENT,
   ServiceOrderStatus.AWAITING_APPROVAL,
   ServiceOrderStatus.IN_DIAGNOSIS,
   ServiceOrderStatus.RECEIVED,

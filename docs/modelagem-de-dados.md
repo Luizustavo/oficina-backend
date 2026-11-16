@@ -85,6 +85,9 @@ erDiagram
         string   orderNumber UK
         uuid     customerId FK
         uuid     vehicleId FK
+        string   customerName "foto na abertura"
+        string   customerEmail "foto na abertura"
+        string   vehiclePlate "foto na abertura"
         string   problemDescription
         enum     status
         decimal  totalAmount "10,2"
@@ -200,6 +203,16 @@ A regra: derivação dentro da mesma linha é redundância pura; agregação ent
 ### A coluna `position`
 
 Preserva a ordem em que os itens foram adicionados. Sem ela, a ordem de leitura do banco é indefinida, e o mesmo pedido retornaria os itens embaralhados entre duas requisições. A restrição `UNIQUE (serviceOrderId, position)` impede duas linhas disputarem a mesma posição.
+
+## Fase 4: dados do cliente e do veículo gravados na OS
+
+Na Fase 4 o sistema virou três microsserviços, e a OS passou a conversar com o Billing e o Execution por mensagens. Para isso, a OS guarda três dados copiados no momento da abertura: `customerName`, `customerEmail` e `vehiclePlate`.
+
+- **Por quê.** Até a Fase 3, cada mudança de status consultava a tabela de clientes para descobrir para onde mandar o e-mail. Com a saga, o OS Service precisa mandar ao Billing o nome e o e-mail do cliente no comando de orçamento. Com os dados na própria OS, nenhum caso de uso além da criação depende das tabelas de cliente e veículo.
+- **É a mesma ideia dos preços nas tabelas de junção:** a OS registra a situação do momento em que foi aberta. Se o cliente trocar de e-mail depois, as notificações de uma OS já aberta continuam indo para o e-mail que ele informou ao abrir o serviço. Isso é intencional e está coberto por um teste de integração.
+- **OS antigas.** A migração `20261116000000_fase4_status_e_dados_do_cliente_na_os` preenche as três colunas das OS que já existiam a partir das tabelas de cliente e veículo, antes de torná-las obrigatórias.
+
+A mesma migração acrescenta os status `AWAITING_PAYMENT` e `PAID` da saga (ADR-011).
 
 ---
 

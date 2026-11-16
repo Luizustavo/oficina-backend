@@ -1,7 +1,6 @@
 import { IEmailNotificationService } from '@domain/services/email-notification.service.interface';
 import { IServiceOrderRepository } from '@domain/repositories/service-order.repository.interface';
 import { ServiceOrderResponseDto } from '@application/dtos/response/service-order.dto';
-import { ICustomerRepository } from '@domain/repositories/customer.repository.interface';
 import { Injectable, Logger } from '@nestjs/common';
 import { ServiceOrderMetrics } from '@infrastructure/observability/service-order.metrics';
 import { ServiceOrderMapper } from '@application/mappers/service-order.mapper';
@@ -11,7 +10,6 @@ import { NotFoundException } from '@shared/exceptions/domain.exceptions';
 export class ApproveOrderUseCase {
   constructor(
     private readonly orderRepository: IServiceOrderRepository,
-    private readonly customerRepository: ICustomerRepository,
     private readonly emailService: IEmailNotificationService,
     private readonly metrics: ServiceOrderMetrics,
     private readonly logger: Logger,
@@ -40,15 +38,14 @@ export class ApproveOrderUseCase {
       since: previousStatusSince,
     });
 
-    const customer = await this.customerRepository.findById(updated.customerId);
-    if (customer) {
-      await this.emailService.sendServiceOrderStatusUpdate({
-        to: customer.email,
-        customerName: customer.name,
-        orderNumber: updated.orderNumber,
-        status: updated.status,
-      });
-    }
+    // Nome e e-mail gravados na OS na abertura (ADR-008/ADR-011): sem
+    // consulta à tabela de clientes.
+    await this.emailService.sendServiceOrderStatusUpdate({
+      to: updated.customerEmail,
+      customerName: updated.customerName,
+      orderNumber: updated.orderNumber,
+      status: updated.status,
+    });
 
     this.logger.log(`Service order ${id} transitioned to IN_PROGRESS`);
 

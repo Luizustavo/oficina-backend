@@ -36,6 +36,9 @@ export class PrismaServiceOrderMapper {
       orderNumber: entity.orderNumber,
       customerId: entity.customerId,
       vehicleId: entity.vehicleId,
+      customerName: entity.customerName,
+      customerEmail: entity.customerEmail,
+      vehiclePlate: entity.vehiclePlate,
       problemDescription: entity.problemDescription,
       totalAmount: entity.totalAmount,
       notes: entity.notes,
@@ -89,6 +92,9 @@ export class PrismaServiceOrderMapper {
         orderNumber: prisma.orderNumber,
         customerId: prisma.customerId,
         vehicleId: prisma.vehicleId,
+        customerName: prisma.customerName,
+        customerEmail: prisma.customerEmail,
+        vehiclePlate: prisma.vehiclePlate,
         problemDescription: prisma.problemDescription,
         services: prisma.services.map(
           (item): ServiceItem => ({

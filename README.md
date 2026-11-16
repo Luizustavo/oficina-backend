@@ -381,12 +381,16 @@ Cobertura atual:
 ## Fluxo de uma Ordem de Serviço
 
 ```
-RECEIVED → IN_DIAGNOSIS → AWAITING_APPROVAL → IN_PROGRESS → COMPLETED → DELIVERED
-                                                    ↓
-                                                CANCELED (de qualquer estado exceto DELIVERED)
+RECEIVED → IN_DIAGNOSIS → AWAITING_APPROVAL → AWAITING_PAYMENT → PAID → IN_PROGRESS → COMPLETED → DELIVERED
+                ▲                │
+                └────────────────┘ compensação: o Billing não conseguiu gerar o orçamento
+
+CANCELED: de qualquer estado anterior a COMPLETED
 ```
 
-A cada transição, o cliente recebe um e-mail automático. A transição `AWAITING_APPROVAL → IN_PROGRESS` (ou `→ CANCELED`, em caso de recusa) também pode ser disparada externamente via `PATCH /service-orders/track/:orderNumber/budget-decision`, sem autenticação — pensado para integração com um sistema de aprovação de orçamento de terceiros.
+Na Fase 4 a OS segue a saga da ADR-011: o orçamento é aprovado no Billing, o cliente paga pelo Mercado Pago e só então o Execution executa o reparo. A cada transição, o cliente recebe um e-mail automático, enviado para o e-mail gravado na OS no momento da abertura.
+
+**Transição em andamento:** enquanto a decisão de orçamento não passa para o Billing (etapa 4.2 do plano), a aprovação direta da Fase 3, `AWAITING_APPROVAL → IN_PROGRESS`, continua disponível pelas rotas `PATCH /service-orders/:id/approve` e `PATCH /service-orders/track/:orderNumber/budget-decision`.
 
 ---
 
