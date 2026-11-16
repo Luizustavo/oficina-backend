@@ -7,6 +7,7 @@
  */
 import { ServiceOrderRepository } from '@infrastructure/database/prisma/repositories/service-order.repository';
 import { RequestApprovalUseCase } from '@application/use-cases/service-order/request-approval.use-case';
+import { ExpireSagaDeadlinesUseCase } from '@application/use-cases/saga/expire-saga-deadlines.use-case';
 import { ProcessSagaEventUseCase } from '@application/use-cases/saga/process-saga-event.use-case';
 import { PrismaTransactionManager } from '@infrastructure/database/prisma/prisma-transaction-manager';
 import { RabbitMqMessagePublisher } from '@infrastructure/messaging/rabbitmq-message-publisher';
@@ -38,6 +39,7 @@ describe('Saga orquestrada (integração)', () => {
   let consumer: SagaEventsConsumer;
   let orders: ServiceOrderRepository;
   let requestApproval: RequestApprovalUseCase;
+  let expireDeadlines: ExpireSagaDeadlinesUseCase;
   const emails: string[] = [];
 
   beforeAll(async () => {
@@ -67,6 +69,11 @@ describe('Saga orquestrada (integração)', () => {
       // Prazos longos: os testes de prazo vencido ficam para a varredura.
       { approvalTimeoutMs: 3_600_000, paymentTimeoutMs: 3_600_000 },
       metrics,
+      logger,
+    );
+    expireDeadlines = new ExpireSagaDeadlinesUseCase(
+      sagas,
+      processSagaEvent,
       logger,
     );
     requestApproval = new RequestApprovalUseCase(
@@ -386,5 +393,76 @@ describe('Saga orquestrada (integração)', () => {
       await consumer.handle(await event(id, 'billing.payment.confirmed')),
     ).toBe('retried');
     expect((await orders.findById(id))?.status).toBe('AWAITING_APPROVAL');
+  });
+
+  describe('prazos vencidos', () => {
+    /** Faz o prazo do passo atual da saga vencer agora. */
+    const expireNow = async (orderId: string) => {
+      const saga = await sagaOf(orderId);
+      await prisma.sagaInstance.update({
+        where: { id: saga.id },
+        data: { deadlineAt: new Date(Date.now() - 1000) },
+      });
+    };
+
+    it('aprovação vencida: cancela a OS e o orçamento (APPROVAL_TIMEOUT)', async () => {
+      const { id } = await orderInDiagnosis();
+      await requestApproval.execute(id);
+      await consumer.handle(await event(id, 'billing.budget.created'));
+      expect((await sagaOf(id)).deadlineAt).toBeInstanceOf(Date);
+      await expireNow(id);
+
+      expect(await expireDeadlines.execute()).toBeGreaterThanOrEqual(1);
+
+      expect((await orders.findById(id))?.status).toBe('CANCELED');
+      const cancel = await prisma.outboxMessage.findFirstOrThrow({
+        where: {
+          routingKey: 'billing.budget.cancel',
+          payload: { path: ['orderId'], equals: id },
+        },
+      });
+      expect(cancel.payload).toMatchObject({
+        payload: { reason: 'APPROVAL_TIMEOUT' },
+      });
+    });
+
+    it('pagamento vencido: devolve as peças ao estoque (PAYMENT_TIMEOUT)', async () => {
+      const { id } = await orderInDiagnosis();
+      await requestApproval.execute(id);
+      await consumer.handle(await event(id, 'billing.budget.created'));
+      await consumer.handle(await event(id, 'billing.budget.approved'));
+      expect(await stock()).toBe(3);
+      await expireNow(id);
+
+      await expireDeadlines.execute();
+
+      expect((await orders.findById(id))?.status).toBe('CANCELED');
+      expect(await stock()).toBe(5);
+      expect(await sagaOf(id)).toMatchObject({
+        status: 'COMPENSATING',
+        step: 'CANCELING_BUDGET',
+      });
+    });
+
+    it('duas varreduras ao mesmo tempo cancelam uma vez só (trava da saga)', async () => {
+      const { id } = await orderInDiagnosis();
+      await requestApproval.execute(id);
+      await consumer.handle(await event(id, 'billing.budget.created'));
+      await consumer.handle(await event(id, 'billing.budget.approved'));
+      await expireNow(id);
+
+      // Como duas réplicas do OS rodando a varredura no mesmo instante.
+      await Promise.all([expireDeadlines.execute(), expireDeadlines.execute()]);
+
+      const cancels = await prisma.outboxMessage.count({
+        where: {
+          routingKey: 'billing.budget.cancel',
+          payload: { path: ['orderId'], equals: id },
+        },
+      });
+      expect(cancels).toBe(1);
+      // Peças devolvidas uma vez só: 5 - 2 reservadas + 2 devolvidas.
+      expect(await stock()).toBe(5);
+    });
   });
 });

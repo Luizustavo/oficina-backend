@@ -71,7 +71,9 @@ export class ProcessSagaEventUseCase {
     );
 
     return this.transactions.run(async () => {
-      const saga = await this.sagaRepository.findCurrentByOrderId(
+      // Travada até o fim da transação: eventos simultâneos da mesma saga
+      // são aplicados um de cada vez.
+      const saga = await this.sagaRepository.lockCurrentByOrderId(
         event.orderId,
       );
       if (!saga) {

@@ -95,6 +95,8 @@ const makeSagaRepo = (): jest.Mocked<ISagaRepository> => ({
   update: jest.fn((saga: SagaInstanceEntity) => Promise.resolve(saga)),
   findById: jest.fn(),
   findCurrentByOrderId: jest.fn().mockResolvedValue(null),
+  lockCurrentByOrderId: jest.fn().mockResolvedValue(null),
+  findExpired: jest.fn().mockResolvedValue([]),
   appendLog: jest.fn(),
   findLogs: jest.fn(),
 });

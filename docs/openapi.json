@@ -105,7 +105,7 @@
             "bearer": []
           }
         ],
-        "summary": "List service orders (paginated). Without a status filter, orders are sorted by priority (IN_PROGRESS > AWAITING_APPROVAL > IN_DIAGNOSIS > RECEIVED, oldest first) and COMPLETED/DELIVERED orders are excluded",
+        "summary": "List service orders (paginated). Without a status filter, orders are sorted by priority (IN_PROGRESS > PAID > AWAITING_PAYMENT > AWAITING_APPROVAL > IN_DIAGNOSIS > RECEIVED > CANCELED, oldest first) and COMPLETED/DELIVERED orders are excluded",
         "tags": [
           "service-orders"
         ]
@@ -225,52 +225,6 @@
         ]
       }
     },
-    "/api/service-orders/track/{orderNumber}/budget-decision": {
-      "patch": {
-        "operationId": "ServiceOrdersController_budgetDecisionHandler",
-        "parameters": [
-          {
-            "name": "orderNumber",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BudgetDecisionRequestDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Receive an external budget approval/rejection notification (public webhook, no auth required)",
-        "tags": [
-          "service-orders"
-        ]
-      }
-    },
     "/api/service-orders/metrics/average-execution-time": {
       "get": {
         "operationId": "ServiceOrdersController_averageExecutionTime",
@@ -329,6 +283,42 @@
           }
         ],
         "summary": "Find service order by ID",
+        "tags": [
+          "service-orders"
+        ]
+      }
+    },
+    "/api/service-orders/{id}/saga": {
+      "get": {
+        "operationId": "ServiceOrdersController_findSaga",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Current saga of the order: step, status, deadline, last error and the full event history",
         "tags": [
           "service-orders"
         ]
@@ -420,7 +410,7 @@
             "bearer": []
           }
         ],
-        "summary": "Add part to order (decrements stock)",
+        "summary": "Add part to order (checks stock; stock is reserved when the budget is approved)",
         "tags": [
           "service-orders"
         ]
@@ -492,79 +482,7 @@
             "bearer": []
           }
         ],
-        "summary": "Transition: IN_DIAGNOSIS → AWAITING_APPROVAL",
-        "tags": [
-          "service-orders"
-        ]
-      }
-    },
-    "/api/service-orders/{id}/approve": {
-      "patch": {
-        "operationId": "ServiceOrdersController_approveHandler",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Transition: AWAITING_APPROVAL → IN_PROGRESS",
-        "tags": [
-          "service-orders"
-        ]
-      }
-    },
-    "/api/service-orders/{id}/complete": {
-      "patch": {
-        "operationId": "ServiceOrdersController_completeHandler",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Transition: IN_PROGRESS → COMPLETED",
+        "summary": "Transition: IN_DIAGNOSIS → AWAITING_APPROVAL. Starts the saga: the Billing Service generates the budget, and approval, payment and execution then advance the order through events",
         "tags": [
           "service-orders"
         ]
@@ -636,7 +554,7 @@
             "bearer": []
           }
         ],
-        "summary": "Transition: any → CANCELED",
+        "summary": "Transition: any status before COMPLETED → CANCELED. With a saga running, the saga compensates the current step (cancels the budget, returns the parts, cancels the job, refunds the payment)",
         "tags": [
           "service-orders"
         ]
@@ -1762,11 +1680,84 @@
           "auth"
         ]
       }
+    },
+    "/auth/cpf": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Autenticação do cliente por CPF (função serverless)",
+        "description": "Atendida por uma AWS Lambda, não por esta aplicação. Valida os dígitos verificadores do CPF, confirma que o cliente existe na base e devolve um JWT com `role: CUSTOMER`. Use o token em **Authorize** para consumir as rotas protegidas como cliente.\n\nResponde **401** tanto para cliente inexistente quanto para inativo: diferenciar os dois casos transformaria o endpoint num oráculo para descobrir quais CPFs estão cadastrados.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "cpf"
+                ],
+                "properties": {
+                  "cpf": {
+                    "type": "string",
+                    "example": "529.982.247-25",
+                    "description": "Com ou sem pontuação."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token emitido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accessToken": {
+                      "type": "string"
+                    },
+                    "expiresIn": {
+                      "type": "string",
+                      "example": "15m"
+                    },
+                    "customer": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "CPF ausente, malformado ou com dígito verificador inválido"
+          },
+          "401": {
+            "description": "Cliente não encontrado ou inativo"
+          },
+          "503": {
+            "description": "Banco de dados indisponível"
+          }
+        }
+      }
     }
   },
   "info": {
     "title": "Oficina Backend API",
-    "description": "Mechanical Workshop Management System - Tech Challenge SOAT Fase 1",
+    "description": "Sistema de gestão de ordens de serviço de uma oficina mecânica — Tech Challenge SOAT Fase 3.\n\n**Dois caminhos de autenticação, para dois públicos:**\n\n- **Cliente da oficina** — `POST /auth/cpf`, atendida por uma função serverless. Identifica-se só pelo CPF, não tem senha. O token que ela devolve dá acesso apenas aos dados do próprio cliente.\n- **Funcionário** — `POST /api/auth/login`, com e-mail e senha, e um papel (`ADMIN`, `MECHANIC` ou `ATTENDANT`).\n\nUse o botão **Authorize** acima para colar o `accessToken` de qualquer um dos dois e experimentar as rotas protegidas.",
     "version": "1.0",
     "contact": {}
   },
@@ -1805,22 +1796,6 @@
           "customerId",
           "vehicleId",
           "problemDescription"
-        ]
-      },
-      "BudgetDecisionRequestDto": {
-        "type": "object",
-        "properties": {
-          "decision": {
-            "enum": [
-              "APPROVED",
-              "REJECTED"
-            ],
-            "type": "string",
-            "example": "APPROVED"
-          }
-        },
-        "required": [
-          "decision"
         ]
       },
       "AddServiceRequestDto": {

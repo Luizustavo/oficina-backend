@@ -106,7 +106,9 @@ src/
 - **Entry points:** `request-approval` starts the saga (order → `AWAITING_APPROVAL`, `SagaInstanceEntity.start`, `billing.budget.create` in the outbox, same transaction); `SagaEventHandlers` (`infrastructure/messaging/`) registers every broker event of `BROKER_SAGA_EVENTS` and calls the executor; `cancel-order` with a `RUNNING` saga sends the internal `saga.manual-cancel` event so the saga compensates.
 - **One saga per attempt:** `saga_instances.orderId` is not unique; the current saga is the most recent (`ISagaRepository.findCurrentByOrderId`). Events carrying an older `sagaId` are ignored as stale.
 - **Stock is reserved at budget approval, not when a part is added**: `add-part-to-order` only checks availability; releasing stock is a saga compensation.
-- Timeouts come from `sagaConfig()` (`SAGA_APPROVAL_TIMEOUT_SECONDS`, `SAGA_PAYMENT_TIMEOUT_SECONDS`) through the `SagaSettings` token; the saga stores `deadlineAt` when entering approval/payment.
+- **Concurrency:** the executor reads the saga with `ISagaRepository.lockCurrentByOrderId` (`SELECT ... FOR UPDATE`), so two events for the same saga (different replicas, or an event racing a timeout) are applied one after the other and the second one sees the new state. Never read the saga without the lock inside the executor; `test/integration/saga.integration-spec.ts` ("trava da saga") fails without it.
+- **Timeouts:** `sagaConfig()` (`SAGA_APPROVAL_TIMEOUT_SECONDS`, `SAGA_PAYMENT_TIMEOUT_SECONDS`, via the `SagaSettings` token) sets `deadlineAt` when entering approval/payment. `SagaDeadlineScheduler` (`infrastructure/saga/`, every `SAGA_SWEEP_INTERVAL_SECONDS`, 0 disables) runs `ExpireSagaDeadlinesUseCase`, which sends the internal `saga.approval.timeout` / `saga.payment.timeout` event of the current step through the executor.
+- **Query:** `GET /api/service-orders/:id/saga` (`GetServiceOrderSagaUseCase`, `@CustomerScope({ order: 'id' })`) returns the current saga and its `SagaStepLog` history.
 
 ### Import Ordering
 

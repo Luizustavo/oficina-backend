@@ -30,6 +30,18 @@ export abstract class ISagaRepository {
   abstract findCurrentByOrderId(
     orderId: string,
   ): Promise<SagaInstanceEntity | null>;
+  /**
+   * Como `findCurrentByOrderId`, mas trava a linha até o fim da transação
+   * (`SELECT ... FOR UPDATE`). Dois eventos da mesma saga processados ao
+   * mesmo tempo (réplicas diferentes, ou um evento e o prazo vencendo) passam
+   * a ser tratados um depois do outro: o segundo já vê o estado novo.
+   * Só faz sentido dentro de `ITransactionManager.run`.
+   */
+  abstract lockCurrentByOrderId(
+    orderId: string,
+  ): Promise<SagaInstanceEntity | null>;
+  /** Sagas em andamento com o prazo do passo atual vencido. */
+  abstract findExpired(now: Date, limit: number): Promise<SagaInstanceEntity[]>;
   abstract appendLog(log: SagaStepLog): Promise<void>;
   abstract findLogs(sagaId: string): Promise<SagaStepLog[]>;
 }

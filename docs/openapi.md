@@ -1,6 +1,6 @@
 # Collection completa da API
 
-`openapi.json` é o spec OpenAPI 3 exportado direto do Swagger da aplicação (35 endpoints). Ao contrário do Swagger UI ao vivo (que só responde enquanto a infraestrutura estiver de pé), este arquivo é versionado no repositório — sempre acessível, independente do estado da infra.
+`openapi.json` é o spec OpenAPI 3 exportado direto do Swagger da aplicação (48 operações). Ao contrário do Swagger UI ao vivo (que só responde enquanto a infraestrutura estiver de pé), este arquivo é versionado no repositório — sempre acessível, independente do estado da infra.
 
 ## Como usar
 
@@ -13,5 +13,5 @@
 Depois de qualquer mudança na API, com o servidor local rodando (`npm run start:dev`):
 
 ```bash
-curl -s http://localhost:3000/api/docs-json | python3 -m json.tool > docs/openapi.json
+curl -s http://localhost:3000/api/docs-json | node -e "process.stdout.write(JSON.stringify(JSON.parse(require('fs').readFileSync(0)), null, 2) + '\\n')" > docs/openapi.json
 ```

@@ -400,6 +400,8 @@ Na Fase 4 a OS segue a **saga orquestrada** da ADR-011. A equipe conduz a OS at�
 
 Se algo falhar (orçamento recusado, pagamento recusado ou vencido, falha na execução), a saga compensa sozinha: cancela o orçamento, devolve as peças ao estoque e, se a OS já foi paga, pede o estorno. O cancelamento pela equipe (`PATCH /service-orders/:id/cancel`) também passa pela saga. As rotas de aprovação e de conclusão da Fase 3 (`/approve`, `/complete` e `/track/:orderNumber/budget-decision`) foram removidas: a aprovação acontece no Billing e a conclusão vem do Execution.
 
+Aprovação e pagamento têm prazo (`SAGA_APPROVAL_TIMEOUT_SECONDS` e `SAGA_PAYMENT_TIMEOUT_SECONDS`, no ConfigMap): vencido o prazo, a saga compensa sozinha. Para ver em que passo a saga de uma OS está, com o histórico de todos os eventos, use `GET /service-orders/:id/saga`.
+
 A cada transição, o cliente recebe um e-mail automático, enviado para o e-mail gravado na OS no momento da abertura.
 
 ---
