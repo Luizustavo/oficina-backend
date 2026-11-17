@@ -1,6 +1,6 @@
 # Diagrama de Componentes
 
-Visão de nuvem do sistema: entrada pública, computação, dados e observabilidade.
+Arquitetura final da Fase 4: três microsserviços, cada um com o próprio banco, conversando por RabbitMQ numa saga orquestrada, atrás de um API Gateway. As decisões estão nas ADRs 009 a 015.
 
 ---
 
@@ -9,127 +9,185 @@ Visão de nuvem do sistema: entrada pública, computação, dados e observabilid
 ```mermaid
 flowchart TB
     CLI["Cliente da oficina<br/>autentica por CPF"]
-    FUNC["Funcionário<br/>ADMIN · MECHANIC · ATTENDANT"]
+    FUNC["Equipe<br/>ADMIN · MECHANIC · ATTENDANT"]
+    MP["Mercado Pago<br/>Checkout Pro · pagamentos · estornos"]
 
     subgraph AWS["AWS · sa-east-1"]
         direction TB
-        APIGW["API Gateway HTTP API<br/>roteamento · throttling · CORS"]
+        APIGW["API Gateway HTTP API<br/>única porta pública"]
+        LAUTHZ["Lambda authorizer<br/>verifica o JWT na borda"]
 
-        LAUTHZ["Lambda authorizer<br/>verifica HS256 na borda<br/>fora da VPC, sem ENI"]
-
-        subgraph VPC["VPC 10.0.0.0/16 · sem NAT Gateway"]
+        subgraph VPC["VPC · sem NAT Gateway"]
             direction TB
-            LAUTH["Lambda auth-cpf<br/>valida CPF, emite JWT<br/>ENI em subnet privada"]
-            EC2["EC2 t3.small · k3s<br/>Deployment 2-6 pods<br/>Service NodePort 30080<br/>HPA CPU/memória 70%"]
-            RDS[("RDS PostgreSQL 16<br/>db.t4g.micro<br/>subnet privada")]
-        end
+            LAUTH["Lambda auth-cpf<br/>valida CPF e emite JWT<br/>(parte do OS Service, ADR-014)"]
 
-        ECR["ECR<br/>imagens"]
-        CW["CloudWatch Logs<br/>Lambda e API Gateway"]
+            subgraph K3S["EC2 c7i-flex.large · k3s"]
+                direction TB
+                TRAEFIK["Traefik (Ingress)<br/>NodePort 30080<br/>roteia por prefixo"]
+
+                subgraph NSOS["namespace oficina"]
+                    OS["OS Service<br/>NestJS · /api<br/>ordem, cliente, estoque<br/>orquestra a saga"]
+                end
+                subgraph NSBILL["namespace billing"]
+                    BILL["Billing Service<br/>NestJS · /api/billing<br/>orçamento e pagamento"]
+                    REDIS[("Redis<br/>idempotência do webhook<br/>trava por OS")]
+                end
+                subgraph NSEXEC["namespace execution"]
+                    EXEC["Execution Service<br/>NestJS · /api/execution<br/>fila de diagnóstico e reparo"]
+                    MONGO[("MongoDB 8<br/>execution_db")]
+                end
+                subgraph NSMQ["namespace messaging"]
+                    MQ{{"RabbitMQ 4.1<br/>saga.commands · saga.events<br/>filas com retentativa e DLQ"}}
+                end
+            end
+
+            subgraph RDS["RDS PostgreSQL 16 · subnet privada"]
+                DBOS[("oficina_db<br/>os_user · auth_reader")]
+                DBBILL[("billing_db<br/>billing_user")]
+            end
+        end
+        ECR["ECR<br/>uma imagem por serviço"]
     end
 
-    NR["New Relic<br/>traces · métricas · logs"]
-    RESEND["Resend<br/>e-mail transacional"]
+    NR["New Relic<br/>traces · métricas · logs (OTLP)"]
+    RESEND["Resend<br/>e-mail ao cliente"]
 
     CLI -->|"POST /auth/cpf"| APIGW
-    CLI -->|"rotas protegidas<br/>Bearer JWT"| APIGW
-    FUNC -->|"POST /api/auth/login"| APIGW
+    CLI -->|"Bearer JWT"| APIGW
+    FUNC -->|"Bearer JWT"| APIGW
+    MP -->|"webhook (rota pública,<br/>assinatura x-signature)"| APIGW
 
-    APIGW -->|"AWS_PROXY"| LAUTH
-    APIGW -.->|"autoriza rota sensível"| LAUTHZ
-    APIGW -->|"HTTP_PROXY :30080"| EC2
+    APIGW --> LAUTH
+    APIGW -.->|"rotas protegidas"| LAUTHZ
+    APIGW -->|"HTTP :30080"| TRAEFIK
 
-    LAUTH -->|"SELECT em customers"| RDS
-    EC2 -->|"5432 · rota local"| RDS
-    EC2 -->|"pull da imagem"| ECR
+    TRAEFIK -->|"/api"| OS
+    TRAEFIK -->|"/api/billing"| BILL
+    TRAEFIK -->|"/api/execution"| EXEC
 
-    APIGW --> CW
-    LAUTH --> CW
-    LAUTHZ --> CW
+    LAUTH -->|"SELECT 4 colunas<br/>de customers"| DBOS
+    OS --> DBOS
+    BILL --> DBBILL
+    BILL --> REDIS
+    EXEC --> MONGO
 
-    EC2 -->|"OTLP"| NR
-    EC2 -->|"API"| RESEND
+    OS <-->|"comandos / eventos"| MQ
+    BILL <-->|"comandos / eventos"| MQ
+    EXEC <-->|"comandos / eventos"| MQ
 
-    style RDS fill:#e8f0fe,stroke:#4285f4
+    BILL -->|"cria checkout, consulta pagamento, estorna"| MP
+    OS --> RESEND
+    OS -.-> NR
+    BILL -.-> NR
+    EXEC -.-> NR
+
+    style MQ fill:#fff4e5,stroke:#f59e0b
     style APIGW fill:#fff4e5,stroke:#f59e0b
-    style NR fill:#f0f0f0,stroke:#888
-    style RESEND fill:#f0f0f0,stroke:#888
+    style DBOS fill:#e8f0fe,stroke:#4285f4
+    style DBBILL fill:#e8f0fe,stroke:#4285f4
+    style MONGO fill:#e6f4ea,stroke:#34a853
+    style REDIS fill:#fce8e6,stroke:#ea4335
 ```
 
-O caminho de entrega (GitHub Actions publicando imagem no ECR, aplicando manifestos por SSM e gravando state no S3) está separado mais abaixo, em [Entrega](#entrega), para não sobrecarregar este diagrama.
+**Nenhum serviço acessa o banco de outro, e o próprio banco garante isso:** cada serviço tem um usuário que só conecta no próprio database (o `CONNECT` do `PUBLIC` é revogado), e o MongoDB e o Redis só existem no namespace do serviço dono. A Lambda de CPF lê `customers` porque faz parte da fronteira do OS Service ([ADR-014](../adr/adr-014-lambda-de-autenticacao-e-a-tabela-customers.md)), com um usuário que só enxerga quatro colunas.
 
+---
+
+## Comunicação e fluxo da saga
+
+Os serviços só conversam por mensagens. O **OS Service orquestra** ([ADR-011](../adr/adr-011-saga-orquestrada.md)): manda **comandos** para a exchange `saga.commands` e reage aos **eventos** que os outros publicam em `saga.events`. Billing e Execution não se conhecem.
+
+```mermaid
+flowchart LR
+    OS["OS Service<br/>(orquestrador)"]
+
+    subgraph MQ["RabbitMQ"]
+        CMD{{"saga.commands<br/>(topic)"}}
+        EVT{{"saga.events<br/>(topic)"}}
+        QB[("billing.commands")]
+        QE[("execution.commands")]
+        QO[("os.saga-events")]
+    end
+
+    BILL["Billing Service"]
+    EXEC["Execution Service"]
+
+    OS -->|"billing.budget.create · cancel<br/>billing.payment.refund<br/>execution.job.enqueue · cancel"| CMD
+    CMD -->|"billing.#"| QB --> BILL
+    CMD -->|"execution.#"| QE --> EXEC
+    BILL -->|"billing.budget.created · approved · rejected<br/>billing.payment.confirmed · failed · refunded"| EVT
+    EXEC -->|"execution.job.queued · started<br/>completed · failed · canceled"| EVT
+    EVT -->|"billing.# · execution.#"| QO --> OS
+```
+
+Cada fila tem três filas de espera (5 s, 30 s, 2 min) e uma DLQ. Toda mensagem sai por um **outbox transacional** (gravada junto com a mudança de estado) e é consumida de forma **idempotente**. Contrato completo em [contratos-de-mensagens.md](contratos-de-mensagens.md).
+
+**O fluxo de uma OS:**
+
+| # | Quem age | O que acontece | Status da OS |
+|---|---|---|---|
+| 1 | Equipe → OS | Abre a OS, faz o diagnóstico, adiciona serviços e peças | `RECEIVED` → `IN_DIAGNOSIS` |
+| 2 | Equipe → OS | Pede a aprovação: a saga começa, `billing.budget.create` | `AWAITING_APPROVAL` |
+| 3 | Billing | Gera o orçamento, `billing.budget.created` | |
+| 4 | Cliente → Billing | Aprova (token da Lambda de CPF); o Billing cria o checkout no Mercado Pago; `billing.budget.approved`; o OS reserva as peças | `AWAITING_PAYMENT` |
+| 5 | Mercado Pago → Billing | Webhook do pagamento aprovado, `billing.payment.confirmed`; o OS manda `execution.job.enqueue` | `PAID` |
+| 6 | Mecânico → Execution | Diagnóstico, reparo e conclusão; `execution.job.started` e `completed` | `IN_PROGRESS` → `COMPLETED` |
+| 7 | Equipe → OS | Entrega ao cliente | `DELIVERED` |
+
+**Compensações** (a saga desfaz o que já foi feito, conforme o passo):
+
+| Falha | Compensação |
+|---|---|
+| Orçamento não pôde ser gerado | OS volta para diagnóstico |
+| Cliente recusa, ou o prazo de aprovação vence | `billing.budget.cancel`; OS cancelada |
+| Pagamento recusado, ou o prazo de pagamento vence | `billing.budget.cancel` (expira o checkout); peças devolvidas; OS cancelada |
+| Falha na execução (`/fail` do mecânico) | `billing.payment.refund` (estorno no Mercado Pago); peças devolvidas; OS cancelada |
+| Cancelamento pela equipe | Conforme o passo: cancela o orçamento, o job (`execution.job.cancel`) e estorna se já estava paga |
+
+Diagramas de sequência do caminho feliz e das compensações em [diagramas-de-sequencia.md](diagramas-de-sequencia.md) e [contratos-de-mensagens.md](contratos-de-mensagens.md).
 
 ---
 
 ## Componentes
 
-### Entrada
+| Componente | Tecnologia | Responsabilidade | Decisão |
+|---|---|---|---|
+| **API Gateway** | AWS HTTP API | Única porta pública: roteia, aplica throttling, rotas públicas (CPF, health, docs, webhook) e as protegidas pelo authorizer | — |
+| **Lambda authorizer** | Node.js, fora da VPC | Verifica o JWT HS256 na borda, decisão cacheada 5 min | — |
+| **Lambda auth-cpf** | Node.js, na VPC | Valida o CPF, consulta o cliente e emite o JWT | [ADR-014](../adr/adr-014-lambda-de-autenticacao-e-a-tabela-customers.md) |
+| **Traefik** | Ingress do k3s, NodePort 30080 | Roteia `/api`, `/api/billing` e `/api/execution` para o serviço certo | [ADR-015](../adr/adr-015-traefik-como-ingress.md) |
+| **OS Service** | NestJS + Prisma, PostgreSQL | Ordem de serviço, clientes, veículos, catálogo e estoque; **orquestra a saga** (estado, prazos, compensações) | [ADR-009](../adr/adr-009-divisao-em-microsservicos.md), [ADR-011](../adr/adr-011-saga-orquestrada.md) |
+| **Billing Service** | NestJS + Prisma, PostgreSQL + Redis | Orçamento, aprovação do cliente, Checkout Pro do Mercado Pago, webhook e estorno | [ADR-013](../adr/adr-013-redis-com-dono-unico.md) |
+| **Execution Service** | NestJS + Mongoose, MongoDB | Fila de execução, diagnóstico e reparo, com linha do tempo do job | [ADR-012](../adr/adr-012-mongodb-no-execution-service.md) |
+| **RabbitMQ** | 4.1, filas quorum | Comandos e eventos da saga, retentativa e DLQ | [ADR-010](../adr/adr-010-mensageria-com-rabbitmq.md) |
+| **RDS PostgreSQL 16** | subnet privada | `oficina_db` (OS) e `billing_db` (Billing), um usuário por serviço | [RFC-002](../rfc/rfc-002-escolha-do-banco-de-dados.md) |
+| **New Relic** | OpenTelemetry (OTLP) | Traces que atravessam o RabbitMQ, métricas da saga, logs com `sagaId`/`orderId`, painel e alertas | [observabilidade.md](../observabilidade.md) |
 
-| Componente | Responsabilidade |
-|---|---|
-| **API Gateway (HTTP API)** | Única porta de entrada pública. Roteia, aplica throttling (50 req/s, burst 100), CORS e registra log de acesso em JSON |
-| **Lambda `authorizer`** | Verifica a assinatura HS256 do token nas rotas sensíveis, **antes** de a requisição chegar ao cluster. Decisão cacheada 5 min por token |
+Cada serviço escala sozinho pelo HPA: OS de 1 a 3 réplicas, Billing e Execution de 1 a 2.
 
-Rotas abertas: `POST /auth/cpf`, `/api/health/*`, `/api/docs/*` e `/api/auth/*`. Todo o resto exige token válido na borda. No HTTP API a rota mais específica vence a mais genérica.
+---
 
-### Autenticação
+## Entrega
 
-Dois caminhos, dois públicos:
-
-| Quem | Como | Emitido por |
-|---|---|---|
-| **Cliente da oficina** | CPF, sem senha | Lambda `auth-cpf` |
-| **Funcionário** | e-mail + senha, com papel | Aplicação (`POST /api/auth/login`) |
-
-Ambos produzem JWT HS256 assinado com o **mesmo segredo**, e a aplicação valida os dois com o mesmo `JwtStrategy`. É isso que permite a Lambda existir sem duplicar a lógica de autorização da API.
-
-### Computação
-
-| Componente | Responsabilidade |
-|---|---|
-| **k3s numa EC2 `t3.small`** | Kubernetes conformante em nó único. Escolha de custo — ver [ADR-001](../adr/adr-001-k3s-em-ec2-no-lugar-do-eks.md) |
-| **Deployment** | 2 a 6 réplicas, com probes de liveness e readiness |
-| **HPA** | Escala por CPU e memória a 70% — ver [ADR-002](../adr/adr-002-hpa-para-escalabilidade.md) |
-| **Service NodePort 30080** | k3s puro não provisiona Load Balancer da AWS; o API Gateway fala direto com o IP elástico do nó |
-
-### Dados
-
-**RDS PostgreSQL 16** em subnet privada, sem acesso público. O security group libera a porta 5432 apenas para dois security groups: o do nó k3s e o da Lambda de autenticação.
-
-Justificativa da escolha em [RFC-002](../rfc/rfc-002-escolha-do-banco-de-dados.md); modelo e relacionamentos em [modelagem-de-dados.md](../modelagem-de-dados.md).
-
-### Observabilidade
-
-| Origem | Sinal | Destino |
-|---|---|---|
-| Aplicação | Traces, métricas e logs, via OpenTelemetry | New Relic (OTLP) |
-| Lambdas | Log estruturado em JSON | CloudWatch Logs |
-| API Gateway | Log de acesso em JSON, com latência e `requestId` | CloudWatch Logs |
-| Cluster | CPU e memória dos pods | New Relic (integração Kubernetes) |
-
-OpenTelemetry é padrão aberto, então trocar de fornecedor é mudar duas variáveis de ambiente — ver [ADR-007](../adr/adr-007-opentelemetry-no-lugar-de-agente-proprietario.md). Detalhes e consultas prontas em [observabilidade.md](../observabilidade.md).
-
-### Entrega
-
-Quatro repositórios, quatro pipelines, um bucket de state compartilhado:
+Seis repositórios, cada um com o seu pipeline. Os três de infraestrutura compartilham o state no S3; os três serviços seguem a mesma esteira: lint, testes unitários com cobertura mínima de 80%, testes de integração e E2E, Quality Gate do SonarCloud, build da imagem e, depois do merge na `main`, deploy automático no k3s ([esteira-ci-cd.md](esteira-ci-cd.md)).
 
 ```mermaid
 flowchart LR
-    R1["oficina-infra-k8s<br/>VPC · EC2/k3s · ECR"] -->|"outputs via<br/>terraform_remote_state"| R2["oficina-infra-database<br/>RDS"]
-    R1 --> R3["oficina-lambda-auth<br/>Lambda · API Gateway"]
+    R1["oficina-infra-k8s<br/>VPC · EC2/k3s · ECR<br/>RabbitMQ e namespaces"] -->|"outputs via<br/>terraform_remote_state"| R2["oficina-infra-database<br/>RDS"]
+    R1 --> R3["oficina-lambda-auth<br/>Lambdas · API Gateway"]
     R2 --> R3
-    R4["oficina-backend<br/>aplicação"] -.->|"imagem no ECR<br/>kubectl via SSM"| R1
 
-    S3[("S3<br/>state remoto<br/>k8s/ · database/ · lambda/")]
-    R1 --- S3
-    R2 --- S3
-    R3 --- S3
+    S1["oficina-backend<br/>OS Service"] -.->|"imagem no ECR<br/>kubectl via SSM"| R1
+    S2["oficina-billing-service"] -.-> R1
+    S3["oficina-execution-service"] -.-> R1
+
+    ST[("S3<br/>state remoto")]
+    R1 --- ST
+    R2 --- ST
+    R3 --- ST
 ```
 
-**Ordem de apply:** `k8s` → `database` → `lambda`.
-**Ordem de destroy:** exatamente a inversa — a Lambda cria uma regra no security group do RDS, e o RDS vive na rede do primeiro.
-
-O acoplamento entre repositórios de IaC está registrado em [ADR-005](../adr/adr-005-terraform-state-compartilhado.md).
+**Ordem de apply:** `k8s` → `database` → `lambda`, e depois os deploys dos serviços. **Ordem de destroy:** exatamente a inversa.
 
 ---
 
@@ -138,9 +196,9 @@ O acoplamento entre repositórios de IaC está registrado em [ADR-005](../adr/ad
 ```mermaid
 flowchart TB
     NET["Internet"] -->|"443"| GW["API Gateway<br/>única porta pública"]
-    GW -->|"token verificado na borda"| APP["Aplicação no k3s"]
-    APP -->|"SG do nó"| DB[("RDS<br/>subnet privada")]
-    LMB["Lambda auth-cpf<br/>na VPC"] -->|"SG da Lambda"| DB
+    GW -->|"token verificado na borda"| APP["Serviços no k3s"]
+    APP -->|"SG do nó · um usuário por serviço"| DB[("RDS<br/>subnet privada")]
+    LMB["Lambda auth-cpf<br/>na VPC"] -->|"SG da Lambda · auth_reader"| DB
 
     NET -.->|"bloqueado"| DB
 
@@ -148,11 +206,13 @@ flowchart TB
     style GW fill:#fff4e5,stroke:#f59e0b
 ```
 
-- O banco **não** tem endereço público. Só os dois security groups nomeados alcançam a porta 5432.
+- O banco **não** tem endereço público. Só os security groups do nó e da Lambda alcançam a porta 5432.
+- RabbitMQ, MongoDB e Redis só existem dentro do cluster (`ClusterIP`), sem rota pela internet.
+- Cada serviço valida o JWT de novo, e o cliente é **negado por padrão**: só entra nas rotas marcadas para ele, e só nos próprios dados.
 - O acesso ao nó é por **AWS Systems Manager**, sem chave SSH e sem porta 22 aberta.
-- Segredos do cluster vivem em `Secret` do Kubernetes; os da Lambda, em variável de ambiente criptografada com KMS — ver [ADR-004](../adr/adr-004-segredos-em-variavel-de-ambiente-na-lambda.md).
+- Segredos do cluster vivem em `Secret` do Kubernetes; os da Lambda, em variável de ambiente criptografada com KMS ([ADR-004](../adr/adr-004-segredos-em-variavel-de-ambiente-na-lambda.md)). Em produção, um serviço sem `JWT_SECRET` se recusa a subir.
 - Senha, token, CPF e documento são censurados nos logs antes de saírem do cluster.
 
 ### Limitação conhecida
 
-O `Service` é `NodePort` num nó com IP elástico público, então a porta **30080 é alcançável pela internet**, contornando o API Gateway. Num desenho de produção isso se resolve com o security group do nó aceitando tráfego apenas dos ranges do API Gateway, ou com um Network Load Balancer interno. Está documentado aqui por ser uma consequência direta da escolha de custo do [ADR-001](../adr/adr-001-k3s-em-ec2-no-lugar-do-eks.md), e não um descuido.
+A porta **30080** do Traefik, num nó com IP elástico público, **é alcançável pela internet**, contornando o API Gateway. Num desenho de produção isso se resolve com o security group do nó aceitando tráfego apenas dos ranges do API Gateway, ou com um Network Load Balancer interno. Está documentado aqui por ser uma consequência direta da escolha de custo do [ADR-001](../adr/adr-001-k3s-em-ec2-no-lugar-do-eks.md), e não um descuido.
