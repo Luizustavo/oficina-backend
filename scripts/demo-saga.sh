@@ -101,6 +101,7 @@ order_is()     { [[ "$(order_status)" == "$1" ]]; }
 order_left()   { [[ "$(order_status)" != "$1" ]]; }
 saga_status()  { as_admin GET "/api/service-orders/$ORDER_ID/saga" | jq -r .status; }
 saga_is()      { [[ "$(saga_status)" == "$1" ]]; }
+saga_step_is() { [[ "$(as_admin GET "/api/service-orders/$ORDER_ID/saga" | jq -r .step)" == "$1" ]]; }
 part_stock()   { as_admin GET "/api/parts/$PART_ID" | jq -r .stockQuantity; }
 
 budget_ready() {
@@ -154,7 +155,9 @@ approve_budget() {
 
 ask_payment() { # ask_payment TITULAR
   step "Pagamento no sandbox do Mercado Pago"
-  echo -e "  Abra numa janela anônima, logado com o comprador de teste:\n\n  ${CYAN}$CHECKOUT_URL${NC}\n"
+  echo "  Numa janela anônima, entre em mercadopago.com.br com o USUÁRIO do comprador de teste"
+  echo "  (TESTUSER..., não o e-mail; código de verificação: 6 últimos dígitos do ID da conta). Depois abra:"
+  echo -e "\n  ${CYAN}$CHECKOUT_URL${NC}\n"
   echo "  Cartão de teste com titular $1 e CPF 12345678909."
 }
 
@@ -219,9 +222,14 @@ s3() {
   prepare_order; request_approval; approve_budget
   ask_payment OTHE
   info "O titular só muda num cartão novo: o cartão já salvo no comprador de teste continua com o nome antigo."
+  info "Limitação do sandbox: o Checkout Pro mostra erro com OTHE sem criar o pagamento recusado (ver o guia)."
   wait_until "pagamento recusado (OS em CANCELED)" "$PAYMENT_WAIT_SECONDS" order_is CANCELED
   expect_saga COMPENSATED
-  ok "Pagamento: $(as_customer GET "/api/billing/orders/$ORDER_ID/payment" | jq -r .status)"
+  local payment
+  payment=$(as_customer GET "/api/billing/orders/$ORDER_ID/payment" | jq -r .status)
+  [[ "$payment" == "REJECTED" || "$payment" == "CANCELLED" ]] \
+    || fail "Pagamento em $payment: a OS foi cancelada pelo prazo (como no S5), não pela recusa"
+  ok "Pagamento: $payment"
   expect_stock_restored
   show_saga
 }
@@ -288,11 +296,18 @@ rabbit() { # rabbit MÉTODO CAMINHO [CORPO]: API de gerenciamento (a mesma que o
     "http://localhost:$RABBIT_PORT/api$2" ${3:+--data "$3"}
 }
 
+captured() { # captured ROUTING_KEY → primeira mensagem capturada com essa routing key, ou null
+  rabbit POST "/queues/oficina/$CAPTURE_QUEUE/get" '{"count":50,"ackmode":"ack_requeue_true","encoding":"auto"}' \
+    | jq -c --arg k "$1" '[.[] | select(.routing_key == $k)][0]'
+}
+
 republish() { # republish ROUTING_KEY: publica de novo, idêntica, a mensagem capturada
-  local message
-  message=$(rabbit POST "/queues/oficina/$CAPTURE_QUEUE/get" '{"count":50,"ackmode":"ack_requeue_true","encoding":"auto"}' \
-    | jq -c --arg k "$1" '[.[] | select(.routing_key == $k)][0]')
-  [[ "$message" != "null" ]] || fail "Mensagem $1 não capturada"
+  local message start=$SECONDS
+  # O outbox publica até 1 s depois do commit: espera a mensagem chegar à captura.
+  until message=$(captured "$1") && [[ "$message" != "null" ]]; do
+    (( SECONDS - start > 20 )) && fail "Mensagem $1 não capturada"
+    sleep 1
+  done
   rabbit POST "/exchanges/oficina/$(jq -r .exchange <<<"$message")/publish" \
     "$(jq -c '{properties, routing_key, payload, payload_encoding: "string"}' <<<"$message")" | jq -e .routed >/dev/null
   ok "Republicada $1 com o mesmo messageId $(jq -r .properties.message_id <<<"$message")"
@@ -314,7 +329,7 @@ s7() {
   rabbit POST "/bindings/oficina/e/saga.events/q/$CAPTURE_QUEUE" '{"routing_key":"#"}' >/dev/null
 
   prepare_order; request_approval
-  ensure_tokens
+  wait_until "OS processar o billing.budget.created original" "$WAIT_SECONDS" saga_step_is AWAITING_APPROVAL
   local history_before
   history_before=$(as_admin GET "/api/service-orders/$ORDER_ID/saga" | jq '.history | length')
 
@@ -330,8 +345,12 @@ s7() {
   [[ "$budget_now" == "$BUDGET_ID" ]] || fail "O Billing criou outro orçamento"
   ok "Nenhum efeito duplicado: mesmo orçamento e saga com os mesmos $history_after passos"
   info "Duplicatas nos logs:"
-  kubectl logs -n oficina deployment/oficina-backend --since=1m | grep -i duplicate | tail -2 || true
-  kubectl logs -n billing deployment/oficina-billing-service --since=1m | grep -i duplicate | tail -2 || true
+  local ns deploy ns_deploy
+  for ns_deploy in oficina/oficina-backend billing/oficina-billing-service; do
+    ns=${ns_deploy%/*}; deploy=${ns_deploy#*/}
+    kubectl logs -n "$ns" "deployment/$deploy" --since=1m | grep -i duplicate | tail -1 \
+      | jq -r --arg s "$deploy" '"  \($s): \(.msg)"' || true
+  done
 
   as_customer POST "/api/billing/budgets/$BUDGET_ID/reject" '{"reason":"Fim do cenário S7"}' >/dev/null
   wait_until "OS em CANCELED" "$WAIT_SECONDS" order_is CANCELED

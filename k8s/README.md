@@ -110,12 +110,12 @@ kubectl run psql --rm -it --image=postgres:16-alpine --restart=Never -n oficina 
 
 ## Populando dados de teste (seed)
 
-A imagem de produção não inclui `tsconfig.json` (só o `dist` compilado), então rodar o seed exige copiá-lo pro pod primeiro:
+A imagem de produção não inclui `tsconfig.json` (só o `dist` compilado), e o container roda como o usuário `node`, que não grava em `/app`. Por isso o `tsconfig.json` vai para o `/tmp` do pod, com o `baseUrl` apontando para `/app`:
 
 ```bash
 POD=$(kubectl get pods -n oficina -l app=oficina-backend -o jsonpath='{.items[0].metadata.name}')
-kubectl cp ../tsconfig.json "oficina/$POD:/app/tsconfig.json"
-kubectl exec -n oficina "$POD" -- npm run prisma:seed
+node -e 'const t=require("../tsconfig.json");t.compilerOptions.baseUrl="/app";process.stdout.write(JSON.stringify(t))' \
+  | kubectl exec -i -n oficina "$POD" -- sh -c 'cat > /tmp/tsconfig.json && TS_NODE_PROJECT=/tmp/tsconfig.json npm run prisma:seed'
 ```
 
 ## Verificando
