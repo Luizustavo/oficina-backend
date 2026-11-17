@@ -40,7 +40,7 @@ O dado de cada job é **um documento**:
 
 Status do job: `QUEUED → DIAGNOSING → REPAIRING → DONE`, com `FAILED` e `CANCELED` como saídas.
 
-Índices: `orderId` (único), `{ status, priority, createdAt }` para a fila, e um índice parcial em `pendingEvents.0` para o relay do outbox.
+Índices: `orderId` (único), `{ status, priorityRank, createdAt }` para a fila, e um índice parcial em `pendingEvents.0` para o relay do outbox. `priorityRank` é a prioridade em número (0 = `HIGH`, 1 = `NORMAL`, 2 = `LOW`), porque `priority` em texto ordenaria `HIGH`, `LOW`, `NORMAL`.
 
 ### Outbox embutido no documento
 
