@@ -219,7 +219,7 @@
             "bearer": []
           }
         ],
-        "summary": "Track service order by number (public, no auth required)",
+        "summary": "Track a service order by its number (staff only; customers follow their orders through GET /service-orders/:id)",
         "tags": [
           "service-orders"
         ]

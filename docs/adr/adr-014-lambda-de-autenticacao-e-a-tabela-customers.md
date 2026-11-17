@@ -31,11 +31,16 @@ A tabela `customers` pertence ao banco do **OS Service** (`oficina_db`). A Fase 
 - os READMEs do `oficina-lambda-auth` e do `oficina-backend` declaram que os dois repositórios formam um único serviço lógico, e que a tabela `customers` e o formato do campo `document` são contrato entre eles (como já registrado no `CLAUDE.md` da raiz);
 - o Billing e o Execution **não** acessam `oficina_db`, e o banco garante isso: cada um tem usuário próprio, sem permissão de conexão nesse database ([ADR-009](adr-009-divisao-em-microsservicos.md)).
 
-### Melhoria recomendada: usuário só de leitura para a Lambda
+### Usuários do banco com o mínimo de privilégio
 
-Hoje a Lambda conecta com o usuário administrador do RDS, o mesmo de `database_url`. Ela só precisa ler quatro colunas de uma tabela. O ideal é um usuário `auth_reader` com `SELECT (id, name, email, document) ON customers` e nada mais.
+*(Registrado como evolução na primeira versão desta ADR e feito na etapa 8.)*
 
-Isso depende de criar o usuário de dentro da VPC (o RDS é privado) e de passar a senha para a Lambda via Terraform. Fica registrado como evolução, e **não** como requisito desta fase.
+A Lambda só precisa ler quatro colunas de uma tabela, e o OS Service só precisa do próprio banco. Nenhum dos dois usa mais a conta mestre do RDS:
+
+- **`auth_reader`** (Lambda de CPF): `CONNECT` só no `oficina_db` e `SELECT (id, name, email, document) ON customers`, nada mais. A senha é gerada pelo Terraform do `oficina-lambda-auth` (output `auth_reader_password`), que monta a `DATABASE_URL` da Lambda com ela;
+- **`os_user`** (OS Service): `CONNECT` só no `oficina_db` e dono das tabelas que a migração cria.
+
+Os dois usuários são criados de dentro da VPC por um job do `oficina-backend` (`k8s/db-bootstrap-job.yaml`, idempotente, antes de cada migração), com a conta mestre. O `GRANT` das colunas roda no job de migração, logo depois do `migrate deploy`, porque a tabela só existe depois dele. Com o `CONNECT` do `PUBLIC` revogado no `oficina_db` e no `billing_db`, o banco garante a fronteira: nenhum usuário de serviço conecta no banco de outro.
 
 ## Justificativa
 
@@ -52,7 +57,7 @@ A opção B compraria pureza arquitetural com três problemas novos: rede entre 
 **Negativas**
 - **A fronteira do OS Service atravessa dois repositórios e dois runtimes.** Quem muda `customers` precisa lembrar da Lambda. Mitigado pelo contrato documentado no `CLAUDE.md` da raiz e pela duplicação consciente da validação de CPF ([ADR-006](adr-006-duplicacao-da-validacao-de-cpf.md)).
 - **É uma interpretação da regra, e precisa ser defendida.** Um avaliador pode ver a Lambda como "outro serviço lendo o banco". Esta ADR e o diagrama existem para que essa leitura não aconteça.
-- Enquanto a melhoria do usuário só de leitura não for feita, a Lambda tem mais privilégio do que precisa.
+- Mais um segredo para manter em sincronia: a senha do `auth_reader` sai do Terraform da Lambda e precisa ir para o Secret `oficina-db-admin` do OS, como já acontece com o `JWT_SECRET`. Se divergirem, o login por CPF falha até o próximo deploy do OS.
 
 ## Quando revisitar
 

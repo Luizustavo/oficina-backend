@@ -114,6 +114,19 @@ jobs:
       # Namespace/ConfigMap/Secret are applied once by hand right after
       # `terraform apply` (see k8s/README.md) and aren't touched here —
       # the DB password and API keys they hold don't need to live in CI.
+      # Usuários do banco (ADR-014): os_user para o OS e auth_reader para a Lambda de CPF.
+      - name: Bootstrap database users
+        if: hashFiles('k8s/db-bootstrap-job.yaml') != ''
+        run: |
+          set -euo pipefail
+          kubectl get secret oficina-db-admin -n oficina > /dev/null || {
+            echo "::error::Aplique k8s/oficina-db-admin.yaml antes do deploy (ver k8s/README.md)."
+            exit 1
+          }
+          kubectl delete job oficina-db-bootstrap -n oficina --ignore-not-found
+          kubectl apply -f k8s/db-bootstrap-job.yaml
+          kubectl wait --for=condition=complete job/oficina-db-bootstrap -n oficina --timeout=120s
+
       # Só para serviços com banco relacional (Prisma). Quem não tem
       # k8s/migration-job.yaml (ex.: Execution Service, com MongoDB) pula.
       - name: Run database migration

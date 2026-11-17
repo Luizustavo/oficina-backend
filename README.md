@@ -243,6 +243,8 @@ A infraestrutura **não mora mais neste repositório**. Desde a Fase 3 ela está
 | [`oficina-infra-database`](https://github.com/Luizustavo/oficina-infra-database) | RDS PostgreSQL, subnet group e security group |
 | [`oficina-lambda-auth`](https://github.com/Luizustavo/oficina-lambda-auth) | Lambda de autenticação por CPF e API Gateway |
 
+A Lambda de autenticação por CPF faz parte do **OS Service**, implantada como função serverless ([ADR-014](docs/adr/adr-014-lambda-de-autenticacao-e-a-tabela-customers.md)): ela lê a tabela `customers` deste serviço, e os dois repositórios mudam juntos. Renomear `customers`, suas colunas `id`, `name`, `email`, `document`, ou mudar o formato do `document` (só dígitos) quebra o login por CPF.
+
 **Ordem de apply:** `oficina-infra-k8s` → `oficina-infra-database` → `oficina-lambda-auth`. O repositório do banco lê a rede do primeiro via `terraform_remote_state`, então ele precisa existir antes.
 
 **Ordem de destroy: exatamente a inversa.**
