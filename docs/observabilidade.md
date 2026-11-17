@@ -1,6 +1,6 @@
 # Observabilidade
 
-Instrumentação com **OpenTelemetry**, exportando para o **New Relic**.
+Instrumentação com **OpenTelemetry**, exportando para o **New Relic**. As seções até "Configuração" descrevem a Fase 3 (OS Service); a seção **Fase 4** cobre os três serviços, a saga e a mensageria.
 
 A escolha do OpenTelemetry é deliberada: é padrão aberto e neutro de fornecedor. Trocar o New Relic por Datadog, Grafana Cloud ou SigNoz é mudar duas variáveis de ambiente (`OTEL_EXPORTER_OTLP_ENDPOINT` e a chave), sem tocar em uma linha de código instrumentado.
 
@@ -95,6 +95,66 @@ temporalityPreference: AggregationTemporalityPreference.DELTA
 Não é detalhe de afinação. Com temporalidade cumulativa, cada contador reporta o total acumulado desde o início do processo, e cabe ao New Relic derivar o incremento entre pontos consecutivos. O primeiro ponto de cada série não tem antecessor, então o valor dele se perde.
 
 O efeito foi medido: seis ordens criadas apareciam como **três**, e três entregas como **nenhuma**. Com um Deployment de várias réplicas o erro se multiplica, porque cada pod inicia a própria série. Depois da troca para delta, uma medição controlada de quatro criações e duas entregas devolveu exatamente `4` e `2`.
+
+---
+
+## Fase 4: a saga atravessando os três serviços
+
+Os três serviços (`oficina-backend`, `oficina-billing-service` e `oficina-execution-service`) usam a mesma instrumentação e exportam para a mesma conta do New Relic, cada um com seu `service.name`. Além do que está acima, eles têm:
+
+| Sinal | Como | Onde |
+|---|---|---|
+| **Trace pelo RabbitMQ** | Span `<routing key> publish` (PRODUCER) e `<fila> process` (CONSUMER), ligados pelo `traceparent` | `infrastructure/messaging/message-tracing.ts` |
+| **Logs da saga** | `sagaId`, `orderId`, `messageType` e `messageId` em toda linha escrita durante o processamento de uma mensagem | `infrastructure/observability/message-log-context.ts` |
+| **Saga** (OS) | `saga.started`, `saga.compensations{trigger}`, `saga.finished{status}`, `saga.duration` | `infrastructure/observability/saga.metrics.ts` |
+| **Pagamentos** (Billing) | `billing.payments{status}`, `billing.webhook.received{outcome}` | `infrastructure/observability/billing.metrics.ts` |
+| **Fila de execução** (Execution) | `execution.queue.size{status}`, `execution.jobs.finished{status}`, `execution.job.duration` | `infrastructure/observability/execution.metrics.ts` e `execution-queue.gauge.ts` |
+| **Sinal de vida** | `service.heartbeat` = 1 a cada exportação (30 s) | `infrastructure/observability/tracing.ts` |
+| **Mongo, Redis** | Auto-instrumentação (`mongoose`/`mongodb`, `ioredis`) | `tracing.ts` |
+
+### Como o trace atravessa o broker
+
+A mensagem não sai na hora da requisição: ela é gravada no outbox junto com a mudança de estado, e o relay publica depois. Por isso o contexto do trace também é gravado no outbox (`traceparent`, uma coluna no OS e no Billing e um campo do evento pendente no Execution), e o span de publicação nasce **dele**, e não do contexto ativo do relay. Do outro lado, o consumidor lê o `traceparent` do cabeçalho e processa a mensagem dentro do span de consumo: as consultas ao banco e as próximas linhas do outbox entram no mesmo trace, e a corrente segue de serviço em serviço.
+
+A instrumentação automática do `amqplib` fica **desligada** nos três: ela cria o span de publicação a partir do contexto ativo e sobrescreve o `traceparent` gravado, o que partia o trace em cada salto. As rodadas do relay e a varredura de prazos rodam com `suppressTracing`, para não gerar um trace vazio por segundo.
+
+**O que é um trace e o que não é.** Um trace cobre a cadeia que começa numa requisição. O aviso de pagamento do Mercado Pago, por exemplo, vira um trace só: webhook no Billing → `billing.payment.confirmed` → OS (OS paga) → `execution.job.enqueue` → Execution → `execution.job.queued` → OS. A aprovação do cliente e cada ação do mecânico são requisições novas e começam traces próprios. A saga inteira de uma OS se reconstrói pelos ids:
+
+```sql
+SELECT timestamp, service, messageType, message FROM Log
+WHERE orderId = '<id da OS>' SINCE 1 day ago ORDER BY timestamp
+```
+
+E o histórico de passos fica em `GET /api/service-orders/:id/saga`. Cada linha desse log tem um `trace_id`, que abre o trace daquele trecho.
+
+### Painel
+
+A página **Saga e microsserviços** do painel (gerado por `scripts/gerar-dashboard-newrelic.py`) mostra: sagas iniciadas, concluídas e compensadas; como as sagas terminam; compensações por motivo; duração da saga; mensagens na DLQ; mensagens processadas por fila e desfecho; latência p95 por serviço; pagamentos por status; avisos do Mercado Pago por desfecho; fila de execução; jobs encerrados e duração do reparo; sinal de vida por serviço; erros recentes com `trace.id`.
+
+```bash
+python3 scripts/gerar-dashboard-newrelic.py "$NEW_RELIC_ACCOUNT_ID" > dashboard.json
+# New Relic → Dashboards → Import dashboard → colar o JSON
+```
+
+A profundidade das filas do RabbitMQ (plugin `rabbitmq_prometheus`, porta 15692) não é coletada: exigiria o `nri-prometheus` do New Relic no cluster. O sinal equivalente para o que importa, mensagem que não foi processada, é a contagem de mensagens na DLQ, que vem dos spans de consumo.
+
+### Alertas da saga
+
+Criados por `scripts/gerar-alertas-newrelic.py`, que imprime a requisição do NerdGraph (os nomes dos campos foram conferidos contra o schema da API):
+
+```bash
+python3 scripts/gerar-alertas-newrelic.py "$NEW_RELIC_ACCOUNT_ID" <policy-id> > alertas.json
+curl https://api.newrelic.com/graphql -H "API-Key: $NEW_RELIC_USER_KEY" \
+  -H 'Content-Type: application/json' -d @alertas.json
+```
+
+| Condição | Dispara quando | Prioridade |
+|---|---|---|
+| Mensagem na DLQ | qualquer mensagem esgota as retentativas ou é rejeitada (span de consumo com `oficina.outcome` `dead-lettered` ou `rejected`) | crítico |
+| Compensações da saga acima do normal | mais de 3 compensações em 15 minutos | aviso |
+| `<serviço>` sem sinal (um por serviço) | o `service.heartbeat` some por 5 minutos | crítico |
+
+O sinal de vida existe porque, sem tráfego, o Billing e o Execution não produzem span nenhum (healthchecks e rodadas do relay não geram trace): um alerta baseado em spans dispararia com o serviço saudável e ocioso.
 
 ---
 

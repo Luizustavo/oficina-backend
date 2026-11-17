@@ -10,14 +10,16 @@ Depois, ou importe o JSON em Dashboards > Import, ou crie via NerdGraph:
       -H "API-Key: $NEW_RELIC_USER_KEY" -H 'Content-Type: application/json' \\
       -d @mutation.json
 
-As consultas foram validadas contra dados reais: 17 dos 20 widgets retornaram
-dados. Os 3 vazios são esperados — dois dependem da integracao Kubernetes do
-New Relic, e o de falhas de integracao so mostra algo quando ha falha.
+As consultas das páginas 1 e 2 foram validadas contra dados reais na Fase 3
+(17 de 20 widgets com dados; os vazios dependem da integração Kubernetes do New
+Relic ou de haver falha). As da página 3 (Fase 4) usam as métricas e os spans
+de mensageria dos três serviços.
 """
 import json, sys
 
 ACC = int(sys.argv[1])
 SERVICO = "oficina-backend"
+SERVICOS = "('oficina-backend', 'oficina-billing-service', 'oficina-execution-service')"
 
 def w(titulo, col, row, larg, alt, viz, nrql, nota=None):
     cfg = {
@@ -129,9 +131,66 @@ tecnico = [
       "trace.id liga cada erro ao trace completo e às linhas de log da requisição."),
 ]
 
+# ---------------------------------------------------------------- página 3
+# Fase 4: a saga atravessando OS, Billing e Execution. Métricas emitidas por
+# saga.metrics.ts (OS), billing.metrics.ts e execution.metrics.ts; os spans de
+# mensageria vêm de message-tracing.ts, com o desfecho em `oficina.outcome`.
+saga = [
+    w("Sagas iniciadas (24h)", 1, 1, 3, 3, "viz.billboard",
+      "SELECT sum(`saga.started`) AS 'Iniciadas' FROM Metric SINCE 1 day ago"),
+    w("Sagas concluídas (24h)", 4, 1, 3, 3, "viz.billboard",
+      "SELECT sum(`saga.finished`) AS 'Concluídas' FROM Metric "
+      "WHERE status = 'COMPLETED' SINCE 1 day ago"),
+    w("Sagas compensadas (24h)", 7, 1, 3, 3, "viz.billboard",
+      "SELECT sum(`saga.finished`) AS 'Compensadas' FROM Metric "
+      "WHERE status = 'COMPENSATED' SINCE 1 day ago"),
+    w("Mensagens na DLQ (24h)", 10, 1, 3, 3, "viz.billboard",
+      "SELECT count(*) AS 'Na DLQ' FROM Span WHERE span.kind = 'consumer' "
+      "AND oficina.outcome IN ('dead-lettered', 'rejected') SINCE 1 day ago",
+      "Mensagens que esgotaram as retentativas ou eram inválidas. Ver operacao-da-mensageria.md."),
+
+    w("Como as sagas terminam", 1, 4, 4, 3, "viz.pie",
+      "SELECT sum(`saga.finished`) FROM Metric FACET status SINCE 7 days ago"),
+    w("Compensações por motivo", 5, 4, 4, 3, "viz.bar",
+      "SELECT sum(`saga.compensations`) FROM Metric FACET trigger SINCE 7 days ago",
+      "O motivo é o evento que levou a saga à compensação."),
+    w("Duração da saga (s) — mediana e p95", 9, 4, 4, 3, "viz.table",
+      "SELECT percentile(`saga.duration`, 50, 95) FROM Metric FACET status SINCE 7 days ago"),
+
+    w("Mensagens processadas por fila e desfecho", 1, 7, 6, 3, "viz.stacked-bar",
+      "SELECT count(*) FROM Span WHERE span.kind = 'consumer' "
+      "FACET name, oficina.outcome SINCE 1 day ago TIMESERIES 30 minutes"),
+    w("Latência p95 por serviço (ms)", 7, 7, 6, 3, "viz.line",
+      f"SELECT percentile(`duration.ms`, 95) FROM Span WHERE span.kind = 'server' "
+      f"AND service.name IN {SERVICOS} FACET service.name SINCE 3 hours ago TIMESERIES"),
+
+    w("Pagamentos por status", 1, 10, 4, 3, "viz.bar",
+      "SELECT sum(`billing.payments`) FROM Metric FACET status SINCE 7 days ago"),
+    w("Avisos do Mercado Pago por desfecho", 5, 10, 4, 3, "viz.bar",
+      "SELECT sum(`billing.webhook.received`) FROM Metric FACET outcome SINCE 7 days ago",
+      "invalid_signature acima de zero merece olhar: alguém chamando o webhook sem a assinatura."),
+    w("Fila de execução agora", 9, 10, 4, 3, "viz.billboard",
+      "SELECT max(`execution.queue.size`) FROM Metric FACET status SINCE 5 minutes ago",
+      "max, e não soma: cada réplica do Execution lê a mesma fila no MongoDB."),
+
+    w("Jobs encerrados por status", 1, 13, 4, 3, "viz.bar",
+      "SELECT sum(`execution.jobs.finished`) FROM Metric FACET status SINCE 7 days ago"),
+    w("Duração do reparo (s) — mediana e p95", 5, 13, 4, 3, "viz.billboard",
+      "SELECT percentile(`execution.job.duration`, 50, 95) FROM Metric SINCE 7 days ago"),
+    w("Sinal de vida por serviço", 9, 13, 4, 3, "viz.table",
+      "SELECT latest(timestamp) AS 'último sinal' FROM Metric "
+      "WHERE metricName = 'service.heartbeat' FACET service.name SINCE 30 minutes ago"),
+
+    w("Erros recentes por serviço, com trace", 1, 16, 12, 3, "viz.table",
+      f"SELECT timestamp, service.name, name, otel.status_description, trace.id FROM Span "
+      f"WHERE service.name IN {SERVICOS} AND otel.status_code = 'ERROR' "
+      f"SINCE 6 hours ago LIMIT 20",
+      "Abra o trace.id para ver a mensagem atravessando os serviços até o erro."),
+]
+
 dashboard = {
-    "name": "Oficina — Tech Challenge Fase 3",
-    "description": "Volume de ordens, tempo por status, integrações, latência e recursos do cluster.",
+    "name": "Oficina — Tech Challenge Fase 4",
+    "description": "Ordens de serviço, saga entre OS, Billing e Execution, mensageria, pagamentos e fila de execução.",
     "permissions": "PUBLIC_READ_WRITE",
     "pages": [
         {"name": "Negócio — Ordens de Serviço",
@@ -140,6 +199,9 @@ dashboard = {
         {"name": "Técnico — API e Infraestrutura",
          "description": "Latência, erros, integrações e recursos do Kubernetes.",
          "widgets": tecnico},
+        {"name": "Saga e microsserviços",
+         "description": "Fase 4: sagas, compensações, DLQ, pagamentos e fila de execução nos três serviços.",
+         "widgets": saga},
     ],
 }
 print(json.dumps(dashboard, indent=2, ensure_ascii=False))
