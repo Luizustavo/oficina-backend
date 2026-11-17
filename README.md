@@ -402,6 +402,8 @@ Se algo falhar (orçamento recusado, pagamento recusado ou vencido, falha na exe
 
 Aprovação e pagamento têm prazo (`SAGA_APPROVAL_TIMEOUT_SECONDS` e `SAGA_PAYMENT_TIMEOUT_SECONDS`, no ConfigMap): vencido o prazo, a saga compensa sozinha. Para ver em que passo a saga de uma OS está, com o histórico de todos os eventos, use `GET /service-orders/:id/saga`.
 
+Para demonstrar a saga de ponta a ponta (caminho feliz e cada compensação, cenários S1 a S7) há o `scripts/demo-saga.sh`, que roda contra o API Gateway. Como usá-lo, e como acompanhar e reprocessar mensagens que caem numa DLQ, está em [docs/arquitetura/operacao-da-mensageria.md](docs/arquitetura/operacao-da-mensageria.md).
+
 A cada transição, o cliente recebe um e-mail automático, enviado para o e-mail gravado na OS no momento da abertura.
 
 ---

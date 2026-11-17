@@ -7,6 +7,7 @@
 | [Diagrama de componentes](arquitetura/diagrama-de-componentes.md) | Visão de nuvem: entrada, computação, dados, observabilidade e entrega |
 | [Diagramas de sequência](arquitetura/diagramas-de-sequencia.md) | Autenticação por CPF, abertura de ordem, transição de status e máquina de estados |
 | [Contratos de mensagens](arquitetura/contratos-de-mensagens.md) | Envelope, topologia do RabbitMQ, comandos e eventos da saga, retentativa e DLQ |
+| [Operação da mensageria](arquitetura/operacao-da-mensageria.md) | Painel do RabbitMQ, por que uma mensagem cai na DLQ e como reprocessar; cenários S1 a S7 com o `scripts/demo-saga.sh` |
 | [Esteira de CI/CD](arquitetura/esteira-ci-cd.md) | CI com cobertura e Quality Gate do SonarCloud, CD para o k3s e proteção da `main`, modelo para os três serviços |
 | [Modelagem de dados](modelagem-de-dados.md) | Diagrama ER, relacionamentos, justificativa do banco e índices |
 | [Observabilidade](observabilidade.md) | Instrumentação, consultas NRQL dos dashboards e alertas |
