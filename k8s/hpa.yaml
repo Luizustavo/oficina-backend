@@ -9,8 +9,9 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: oficina-backend
-  minReplicas: 2
-  maxReplicas: 6
+  # Um nó de 4 GB divide a memória com Billing, Execution, RabbitMQ, MongoDB e Redis (orçamento no PLANO-FASE-4).
+  minReplicas: 1
+  maxReplicas: 3
   metrics:
     - type: Resource
       resource:

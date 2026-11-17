@@ -6,7 +6,7 @@ metadata:
   labels:
     app: oficina-backend
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: oficina-backend
@@ -45,9 +45,11 @@ spec:
             requests:
               cpu: "250m"
               memory: "256Mi"
+              ephemeral-storage: "64Mi"
             limits:
               cpu: "500m"
               memory: "512Mi"
+              ephemeral-storage: "256Mi"
           readinessProbe:
             httpGet:
               path: /api/health/ready
