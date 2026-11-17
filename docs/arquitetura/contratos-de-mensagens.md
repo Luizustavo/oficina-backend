@@ -209,7 +209,7 @@ Coloca a OS na fila de execução. Enviado quando a OS entra em `PAID`.
 
 `priority`: `LOW` | `NORMAL` | `HIGH`
 
-Responde com: `execution.job.queued`. Idempotente pelo índice único de `orderId` no Execution.
+Responde com: `execution.job.queued`. Idempotente pelo índice único de `orderId` no Execution: repetido para a mesma OS, é confirmado sem criar outro job nem outro evento. Payload inválido (campo faltando, prioridade desconhecida, OS sem itens) vai direto para a DLQ.
 
 ### `execution.job.cancel`
 
@@ -219,7 +219,11 @@ Compensação. Retira o job da fila ou interrompe a execução.
 { "reason": "MANUAL_CANCEL" }
 ```
 
-Responde com: `execution.job.canceled`.
+Responde com: `execution.job.canceled`, sempre, porque a saga espera essa confirmação para pedir o estorno:
+
+- job ativo (`QUEUED`, `DIAGNOSING`, `REPAIRING`): vai para `CANCELED`;
+- comando repetido, ou job já encerrado (`DONE`, `FAILED`): confirma de novo sem mudar o job;
+- job ainda não existe (o `enqueue` da mesma OS está em retentativa): o comando também vai para retentativa, até o job aparecer.
 
 ---
 
