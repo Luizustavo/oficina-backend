@@ -17,6 +17,7 @@ import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';
 import { otelConfig } from '@infrastructure/config/otel.config';
 import { NodeSDK } from '@opentelemetry/sdk-node';
+import { metrics } from '@opentelemetry/api';
 
 /**
  * Inicialização do OpenTelemetry.
@@ -100,6 +101,15 @@ export function startTracing(): void {
   });
 
   sdk.start();
+
+  // Sinal de vida a cada exportação: sem tráfego o serviço não gera span
+  // nenhum, e o alerta de "serviço sem sinal" dispararia com ele saudável.
+  metrics
+    .getMeter(config.serviceName)
+    .createObservableGauge('service.heartbeat', {
+      description: 'Vale 1 enquanto o processo estiver exportando métricas',
+    })
+    .addCallback((result) => result.observe(1));
 
   // Descarrega o buffer antes do processo morrer. Sem isto, o último lote de
   // spans e métricas se perde exatamente quando o pod cai — que é justamente
