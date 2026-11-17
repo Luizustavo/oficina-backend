@@ -69,7 +69,7 @@ API_URL=https://<id>.execute-api.sa-east-1.amazonaws.com ./scripts/demo-saga.sh 
 |---|---|---|
 | `s1` | Abre a OS, pede aprovação, o cliente aprova, **você paga** no checkout com titular `APRO`, o mecânico executa, a OS é entregue | OS `DELIVERED`, saga `COMPLETED` |
 | `s2` | O cliente recusa o orçamento | OS `CANCELED`, saga `COMPENSATED`, orçamento cancelado no Billing |
-| `s3` | O cliente aprova e **você paga** com titular `OTHE` | OS `CANCELED`, saga `COMPENSATED`, peças devolvidas |
+| `s3` | O cliente aprova e **você paga** com titular `OTHE` | OS `CANCELED`, saga `COMPENSATED`, peças devolvidas, pagamento `REJECTED` (ver a limitação abaixo) |
 | `s4` | Pagamento `APRO`, depois o mecânico registra a falha (peça indisponível) | OS `CANCELED`, job `FAILED`, peças devolvidas, estorno pedido |
 | `s5` | O cliente aprova e ninguém paga | Ao vencer `SAGA_PAYMENT_TIMEOUT_SECONDS`: OS `CANCELED`, saga `COMPENSATED`, peças devolvidas |
 | `s6` | Derruba o Billing (`replicas=0`), pede a aprovação, mostra o comando esperando em `billing.commands`, sobe o Billing | O orçamento é gerado com o comando que esperou; nada se perde |
@@ -77,7 +77,8 @@ API_URL=https://<id>.execute-api.sa-east-1.amazonaws.com ./scripts/demo-saga.sh 
 
 Observações:
 
-- **Pagamento (S1, S3, S4).** O script mostra o link do checkout e espera; pague em janela anônima, logado com o comprador de teste, CPF `12345678909`. O titular do cartão (`APRO`/`OTHE`) só pode ser escolhido num cartão novo: o cartão já salvo no comprador de teste mantém o nome com que foi cadastrado.
+- **Pagamento (S1, S3, S4).** O script mostra o link do checkout e espera. Antes de abrir o link, entre em mercadopago.com.br numa janela anônima com o **usuário** do comprador de teste (formato `TESTUSER...`, do painel *Suas integrações → Contas de teste*; o campo não aceita o e-mail dele). Se pedir código de verificação, são os 6 últimos dígitos do ID da conta de teste. Sem esse login, o checkout responde só "Ops, ocorreu um erro" e não cria pagamento nenhum. Pague com CPF `12345678909`. O titular do cartão (`APRO`/`OTHE`) só pode ser escolhido num cartão novo: o cartão já salvo no comprador de teste mantém o nome com que foi cadastrado.
+- **Limitação do sandbox no S3.** Com o cartão de teste `OTHE` ("Recusado por erro geral"), o Checkout Pro do sandbox mostra uma tela de erro e **não cria o pagamento recusado**: a consulta de pagamentos da conta não mostra tentativa nenhuma, e nenhum aviso chega ao webhook. Aconteceu em duas sessões (16 e 17/11/2026), com o cartão copiado do painel. Sem pagamento, a OS só é cancelada quando vence o prazo, que é o S5; por isso o script do S3 falha se o pagamento terminar `EXPIRED` em vez de `REJECTED`. O caminho da recusa (webhook → nova consulta ao Mercado Pago → `billing.payment.failed` → saga cancela o orçamento e devolve as peças) é coberto pelos testes de integração do Billing e da saga do OS, e a compensação em si é a mesma que o S5 mostra ao vivo.
 - **Estorno (S4).** A API de estornos do Mercado Pago exige as credenciais de produção ativadas na conta. Sem isso, o comando de estorno passa pelas retentativas e cai em `billing.commands.dlq`, e a saga fica em `REFUNDING`: é o caso de reprocessar pela DLQ depois de ativar as credenciais.
 - **Prazo (S5).** O prazo é o `SAGA_PAYMENT_TIMEOUT_SECONDS` do ConfigMap do OS. Para a gravação, um valor curto ajuda:
 

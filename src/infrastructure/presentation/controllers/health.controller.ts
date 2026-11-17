@@ -1,5 +1,5 @@
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '@infrastructure/database/prisma/prisma.service';
 import { Public } from '@infrastructure/presentation/decorators/public.decorator';
 
@@ -19,7 +19,11 @@ export class HealthController {
   @Public()
   @ApiOperation({ summary: 'Readiness probe — database connection is healthy' })
   async ready() {
-    await this.prisma.$executeRawUnsafe('SELECT 1');
+    try {
+      await this.prisma.$executeRawUnsafe('SELECT 1');
+    } catch {
+      throw new ServiceUnavailableException('Database unreachable');
+    }
     return { status: 'ok' };
   }
 }
