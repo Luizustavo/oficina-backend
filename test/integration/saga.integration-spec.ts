@@ -16,6 +16,7 @@ import { SagaRepository } from '@infrastructure/database/prisma/repositories/sag
 import { PartRepository } from '@infrastructure/database/prisma/repositories/part.repository';
 import { IEmailNotificationService } from '@domain/services/email-notification.service.interface';
 import { RabbitMqConnection } from '@infrastructure/messaging/rabbitmq-connection.service';
+import { SagaMetrics } from '@infrastructure/observability/saga.metrics';
 import { ServiceOrderMetrics } from '@infrastructure/observability/service-order.metrics';
 import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
 import { SagaEventsConsumer } from '@infrastructure/messaging/saga-events.consumer';
@@ -69,6 +70,7 @@ describe('Saga orquestrada (integração)', () => {
       // Prazos longos: os testes de prazo vencido ficam para a varredura.
       { approvalTimeoutMs: 3_600_000, paymentTimeoutMs: 3_600_000 },
       metrics,
+      new SagaMetrics(),
       logger,
     );
     expireDeadlines = new ExpireSagaDeadlinesUseCase(
@@ -82,6 +84,7 @@ describe('Saga orquestrada (integração)', () => {
       transactions,
       emailService,
       metrics,
+      new SagaMetrics(),
       logger,
     );
 

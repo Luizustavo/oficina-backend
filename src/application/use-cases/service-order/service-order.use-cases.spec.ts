@@ -21,6 +21,7 @@ import { ICustomerRepository } from '@domain/repositories/customer.repository.in
 import { CancelOrderUseCase } from './cancel-order.use-case';
 import { IVehicleRepository } from '@domain/repositories/vehicle.repository.interface';
 import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
+import { SagaMetrics } from '@infrastructure/observability/saga.metrics';
 import { ServiceOrderMetrics } from '@infrastructure/observability/service-order.metrics';
 import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
 import { IPartRepository } from '@domain/repositories/part.repository.interface';
@@ -318,17 +319,23 @@ describe('RequestApprovalUseCase', () => {
     const transactions = makeTransactions();
     const emailService = makeEmailService();
 
+    const sagaMetrics = {
+      recordStarted: jest.fn(),
+    } as unknown as jest.Mocked<SagaMetrics>;
     const result = await new RequestApprovalUseCase(
       repo,
       sagaRepo,
       transactions,
       emailService,
       makeMetrics(),
+      sagaMetrics,
       makeLogger(),
     ).execute('so-1');
 
     expect(result.status).toBe(ServiceOrderStatus.AWAITING_APPROVAL);
     expect(transactions.run).toHaveBeenCalledTimes(1);
+
+    expect(sagaMetrics.recordStarted).toHaveBeenCalledTimes(1);
 
     const saga = sagaRepo.create.mock.calls[0][0];
     expect(saga.orderId).toBe('so-1');
@@ -369,6 +376,7 @@ describe('RequestApprovalUseCase', () => {
         makeTransactions(),
         makeEmailService(),
         makeMetrics(),
+        { recordStarted: jest.fn() } as unknown as SagaMetrics,
         makeLogger(),
       ).execute('missing'),
     ).rejects.toThrow(NotFoundException);
