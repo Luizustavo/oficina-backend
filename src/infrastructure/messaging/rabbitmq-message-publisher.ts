@@ -10,6 +10,7 @@ import { OutgoingMessage } from '@domain/messaging/saga-message';
 import { RabbitMqConnection } from './rabbitmq-connection.service';
 import { ChannelWrapper } from 'amqp-connection-manager';
 import { assertOsTopology } from './topology';
+import { tracedPublish } from './message-tracing';
 
 import type { ConfirmChannel, ConsumeMessage, Options } from 'amqplib';
 
@@ -73,20 +74,18 @@ export class RabbitMqMessagePublisher
     trace: { traceparent?: string; tracestate?: string } = {},
   ): Promise<void> {
     const { envelope } = message;
-    const headers: Record<string, string> = {};
-    if (trace.traceparent) headers.traceparent = trace.traceparent;
-    if (trace.tracestate) headers.tracestate = trace.tracestate;
-
-    await this.publishRaw(
-      message.exchange,
-      message.routingKey,
-      Buffer.from(JSON.stringify(envelope)),
-      {
-        messageId: envelope.messageId,
-        correlationId: envelope.sagaId,
-        type: envelope.type,
-        headers,
-      },
+    await tracedPublish(message, trace, (headers) =>
+      this.publishRaw(
+        message.exchange,
+        message.routingKey,
+        Buffer.from(JSON.stringify(envelope)),
+        {
+          messageId: envelope.messageId,
+          correlationId: envelope.sagaId,
+          type: envelope.type,
+          headers,
+        },
+      ),
     );
   }
 
