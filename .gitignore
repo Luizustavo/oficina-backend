@@ -31,3 +31,4 @@ Thumbs.db
 # Kubernetes secrets with real values — only the .example template is committed
 k8s/secret.yaml
 
+k8s/oficina-db-admin.yaml

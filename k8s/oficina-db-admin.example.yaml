@@ -1,0 +1,14 @@
+# Modelo: copie para oficina-db-admin.yaml (ignorado pelo git). Só o job de bootstrap usa este Secret.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: oficina-db-admin
+  namespace: oficina
+type: Opaque
+stringData:
+  # terraform -chdir=oficina-infra-database output -raw database_url (conta mestre do RDS)
+  ADMIN_DATABASE_URL: "postgresql://oficina_user:password@rds-endpoint:5432/oficina_db?sslmode=no-verify"
+  # A mesma senha que vai no DATABASE_URL do secret.yaml (os_user). Só letras e números.
+  OS_DB_PASSWORD: "senha-do-os-user"
+  # terraform -chdir=oficina-lambda-auth/infra output -raw auth_reader_password
+  AUTH_READER_PASSWORD: "senha-do-auth-reader"

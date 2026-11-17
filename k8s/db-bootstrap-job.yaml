@@ -1,0 +1,70 @@
+# Cria o os_user (dono do oficina_db) e o auth_reader (Lambda de CPF) no RDS, idempotente.
+# O CD roda este job antes da migração. Usa o Secret oficina-db-admin; ver k8s/README.md e ADR-014.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oficina-db-bootstrap
+  namespace: oficina
+data:
+  bootstrap.sql: |
+    \set ON_ERROR_STOP on
+    SELECT format('CREATE ROLE os_user LOGIN PASSWORD %L', :'os_password')
+     WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'os_user') \gexec
+    SELECT format('ALTER ROLE os_user LOGIN PASSWORD %L', :'os_password') \gexec
+    SELECT format('CREATE ROLE auth_reader LOGIN PASSWORD %L', :'auth_reader_password')
+     WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'auth_reader') \gexec
+    SELECT format('ALTER ROLE auth_reader LOGIN PASSWORD %L', :'auth_reader_password') \gexec
+    GRANT os_user TO CURRENT_USER WITH SET TRUE;
+
+    SELECT format('REVOKE CONNECT ON DATABASE %I FROM PUBLIC', current_database()) \gexec
+    SELECT format('GRANT CONNECT ON DATABASE %I TO os_user, auth_reader', current_database()) \gexec
+    GRANT USAGE, CREATE ON SCHEMA public TO os_user;
+    GRANT USAGE ON SCHEMA public TO auth_reader;
+
+    SELECT format('ALTER TABLE public.%I OWNER TO os_user', tablename)
+      FROM pg_tables WHERE schemaname = 'public' AND tableowner = CURRENT_USER \gexec
+    SELECT format('ALTER TYPE public.%I OWNER TO os_user', t.typname)
+      FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+     WHERE n.nspname = 'public' AND t.typtype = 'e' AND pg_get_userbyid(t.typowner) = CURRENT_USER \gexec
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: oficina-db-bootstrap
+  namespace: oficina
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      containers:
+        - name: bootstrap
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            # psql não entende sslmode=no-verify (opção do driver do Node); a conexão continua com TLS.
+            - >-
+              psql "$(echo "$ADMIN_DATABASE_URL" | sed 's/sslmode=no-verify/sslmode=require/')"
+              -v os_password="$OS_DB_PASSWORD" -v auth_reader_password="$AUTH_READER_PASSWORD"
+              -f /sql/bootstrap.sql
+          envFrom:
+            - secretRef:
+                name: oficina-db-admin
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+              ephemeral-storage: 16Mi
+            limits:
+              memory: 64Mi
+              ephemeral-storage: 64Mi
+          volumeMounts:
+            - name: sql
+              mountPath: /sql
+      volumes:
+        - name: sql
+          configMap:
+            name: oficina-db-bootstrap

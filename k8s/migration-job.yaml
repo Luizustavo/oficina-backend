@@ -17,7 +17,13 @@ spec:
       containers:
         - name: migrate
           image: REPLACE_WITH_ECR_IMAGE_URI:latest
-          command: ["npm", "run", "prisma:migrate:deploy"]
+          # Depois das migrações, libera as colunas de customers para a Lambda de CPF (ADR-014).
+          command:
+            - sh
+            - -c
+            - >-
+              npm run prisma:migrate:deploy &&
+              npx prisma db execute --url "$DATABASE_URL" --file prisma/sql/grant-auth-reader.sql
           resources:
             requests:
               cpu: 50m

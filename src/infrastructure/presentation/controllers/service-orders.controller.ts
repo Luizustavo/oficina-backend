@@ -30,7 +30,6 @@ import { CancelOrderUseCase } from '@application/use-cases/service-order/cancel-
 import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
 import { UserRole } from '@domain/enums/user-role.enum';
 import { CustomerScope } from '@infrastructure/presentation/decorators/customer-scope.decorator';
-import { Public } from '@infrastructure/presentation/decorators/public.decorator';
 import { Roles } from '@infrastructure/presentation/decorators/roles.decorator';
 
 @ApiTags('service-orders')
@@ -91,9 +90,9 @@ export class ServiceOrdersController {
   }
 
   @Get('track/:orderNumber')
-  @Public()
   @ApiOperation({
-    summary: 'Track service order by number (public, no auth required)',
+    summary:
+      'Track a service order by its number (staff only; customers follow their orders through GET /service-orders/:id)',
   })
   async track(@Param('orderNumber') orderNumber: string) {
     return this.trackOrder.execute(orderNumber);
