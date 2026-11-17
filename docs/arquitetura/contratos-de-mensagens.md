@@ -239,6 +239,10 @@ Responde com: `execution.job.canceled`.
 | `billing.payment.refunded` | `{ "paymentId": "uuid", "mpRefundId": "987654321", "amount": "195.90", "refundedAt": "ISO" }` | Estorno concluído |
 | `billing.payment.refund-failed` | `{ "paymentId": "uuid", "detail": "texto" }` | Estorno recusado pelo Mercado Pago. Leva a saga para `FAILED` |
 
+`billing.budget.creation-failed.reason`: `INVALID_PAYLOAD` (campo faltando ou em formato errado) | `INVALID_ITEMS` (sem itens ou quantidade inválida) | `TOTAL_MISMATCH` (`totalAmount` diferente da soma dos itens)
+
+`billing.budget.canceled.budgetId` é `null` quando não havia orçamento para cancelar (a criação tinha falhado). O cancelamento é confirmado mesmo assim, para a saga terminar a compensação.
+
 `billing.payment.failed.reason`: `REJECTED` | `CANCELLED` | `EXPIRED` | `CHECKOUT_UNAVAILABLE`
 
 ### Execution Service
