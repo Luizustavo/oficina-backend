@@ -21,6 +21,7 @@ import {
 } from '@application/saga/saga-commands';
 import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
 import { ServiceOrderMetrics } from '@infrastructure/observability/service-order.metrics';
+import { SagaMetrics } from '@infrastructure/observability/saga.metrics';
 import { SagaInstanceEntity } from '@domain/entities/saga/saga-instance.entity';
 import { IPartRepository } from '@domain/repositories/part.repository.interface';
 import { SagaSettings } from '@application/saga/saga-settings';
@@ -62,6 +63,7 @@ export class ProcessSagaEventUseCase {
     private readonly emailService: IEmailNotificationService,
     private readonly settings: SagaSettings,
     private readonly metrics: ServiceOrderMetrics,
+    private readonly sagaMetrics: SagaMetrics,
     private readonly logger: Logger,
   ) {}
 
@@ -179,6 +181,7 @@ export class ProcessSagaEventUseCase {
     }
     const updated = await this.orderRepository.update(order, messages);
 
+    const previousSagaStatus = saga.status;
     saga.moveTo({
       step: decision.step,
       status: decision.status,
@@ -191,6 +194,15 @@ export class ProcessSagaEventUseCase {
       event,
       SagaLogOutcome.APPLIED,
       decision.commands.map((c) => c.type).join(', ') || undefined,
+    );
+
+    this.transactions.afterCommit(() =>
+      this.sagaMetrics.recordTransition({
+        from: previousSagaStatus,
+        to: saga.status,
+        trigger: event.type,
+        startedAt: saga.createdAt,
+      }),
     );
 
     if (decision.orderAction) {

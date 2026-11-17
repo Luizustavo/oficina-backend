@@ -1,4 +1,6 @@
 import { ServiceOrderMetrics } from './service-order.metrics';
+import { SagaStatus } from '@domain/enums/saga.enum';
+import { SagaMetrics } from './saga.metrics';
 import { IntegrationMetrics } from './integration.metrics';
 import { metrics } from '@opentelemetry/api';
 
@@ -118,6 +120,55 @@ describe('IntegrationMetrics', () => {
     new IntegrationMetrics().recordSuccess('resend');
 
     expect(add).toHaveBeenCalledTimes(1);
+    expect(record).not.toHaveBeenCalled();
+  });
+});
+
+describe('SagaMetrics', () => {
+  const startedAt = new Date(Date.now() - 90_000);
+  const transition = (from: SagaStatus, to: SagaStatus) =>
+    new SagaMetrics().recordTransition({
+      from,
+      to,
+      trigger: 'execution.job.failed',
+      startedAt,
+    });
+
+  it('conta a saga iniciada', () => {
+    new SagaMetrics().recordStarted();
+
+    expect(add).toHaveBeenCalledWith(1);
+  });
+
+  it('conta a compensação pelo evento que a disparou', () => {
+    transition(SagaStatus.RUNNING, SagaStatus.COMPENSATING);
+
+    expect(add).toHaveBeenCalledTimes(1);
+    expect(add).toHaveBeenCalledWith(1, { trigger: 'execution.job.failed' });
+    expect(record).not.toHaveBeenCalled();
+  });
+
+  it('conta o fim da compensação sem contar a compensação de novo', () => {
+    transition(SagaStatus.COMPENSATING, SagaStatus.COMPENSATED);
+
+    expect(add).toHaveBeenCalledTimes(1);
+    expect(add).toHaveBeenCalledWith(1, { status: SagaStatus.COMPENSATED });
+    expect(record).toHaveBeenCalledWith(expect.closeTo(90, 0), {
+      status: SagaStatus.COMPENSATED,
+    });
+  });
+
+  it('saga concluída não é compensação', () => {
+    transition(SagaStatus.RUNNING, SagaStatus.COMPLETED);
+
+    expect(add).toHaveBeenCalledTimes(1);
+    expect(add).toHaveBeenCalledWith(1, { status: SagaStatus.COMPLETED });
+  });
+
+  it('passo intermediário não gera métrica', () => {
+    transition(SagaStatus.RUNNING, SagaStatus.RUNNING);
+
+    expect(add).not.toHaveBeenCalled();
     expect(record).not.toHaveBeenCalled();
   });
 });

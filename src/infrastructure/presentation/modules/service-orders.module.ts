@@ -25,6 +25,7 @@ import { ServiceRepository } from '@infrastructure/database/prisma/repositories/
 import { IPartRepository } from '@domain/repositories/part.repository.interface';
 import { ServiceOrderMetrics } from '@infrastructure/observability/service-order.metrics';
 import { IntegrationMetrics } from '@infrastructure/observability/integration.metrics';
+import { SagaMetrics } from '@infrastructure/observability/saga.metrics';
 import { ExpireSagaDeadlinesUseCase } from '@application/use-cases/saga/expire-saga-deadlines.use-case';
 import { GetServiceOrderSagaUseCase } from '@application/use-cases/saga/get-service-order-saga.use-case';
 import { ProcessSagaEventUseCase } from '@application/use-cases/saga/process-saga-event.use-case';
@@ -44,6 +45,7 @@ import { PartRepository } from '@infrastructure/database/prisma/repositories/par
   providers: [
     Logger,
     ServiceOrderMetrics,
+    SagaMetrics,
     IntegrationMetrics,
     ListServiceOrdersByCustomerUseCase,
     ListServiceOrdersByStatusUseCase,

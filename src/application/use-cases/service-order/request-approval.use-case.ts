@@ -11,6 +11,7 @@ import {
 } from '@application/saga/saga-commands';
 import { ServiceOrderResponseDto } from '@application/dtos/response/service-order.dto';
 import { ServiceOrderMetrics } from '@infrastructure/observability/service-order.metrics';
+import { SagaMetrics } from '@infrastructure/observability/saga.metrics';
 import { SagaInstanceEntity } from '@domain/entities/saga/saga-instance.entity';
 import { ServiceOrderMapper } from '@application/mappers/service-order.mapper';
 import { NotFoundException } from '@shared/exceptions/domain.exceptions';
@@ -31,6 +32,7 @@ export class RequestApprovalUseCase {
     private readonly transactions: ITransactionManager,
     private readonly emailService: IEmailNotificationService,
     private readonly metrics: ServiceOrderMetrics,
+    private readonly sagaMetrics: SagaMetrics,
     private readonly logger: Logger,
   ) {}
 
@@ -72,6 +74,7 @@ export class RequestApprovalUseCase {
       });
 
       this.transactions.afterCommit(async () => {
+        this.sagaMetrics.recordStarted();
         this.metrics.recordTransition({
           fromStatus: previousStatus,
           toStatus: saved.status,

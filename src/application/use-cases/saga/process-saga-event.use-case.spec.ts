@@ -7,6 +7,7 @@ import { IServiceOrderRepository } from '@domain/repositories/service-order.repo
 import { ServiceOrderStatus } from '@domain/validators/value-objects/service-order-status.value-object';
 import { ITransactionManager } from '@domain/services/transaction-manager.interface';
 import { ServiceOrderEntity } from '@domain/entities/service-order/service-order.entity';
+import { SagaMetrics } from '@infrastructure/observability/saga.metrics';
 import { ServiceOrderMetrics } from '@infrastructure/observability/service-order.metrics';
 import { ISagaRepository } from '@domain/repositories/saga.repository.interface';
 import { SagaInstanceEntity } from '@domain/entities/saga/saga-instance.entity';
@@ -106,6 +107,9 @@ function setup(params: {
   const metrics = {
     recordTransition: jest.fn(),
   } as unknown as jest.Mocked<ServiceOrderMetrics>;
+  const sagaMetrics = {
+    recordTransition: jest.fn(),
+  } as unknown as jest.Mocked<SagaMetrics>;
   const logger = {
     log: jest.fn(),
     warn: jest.fn(),
@@ -119,6 +123,7 @@ function setup(params: {
     emailService,
     { approvalTimeoutMs: 48 * HOUR, paymentTimeoutMs: 24 * HOUR },
     metrics,
+    sagaMetrics,
     logger,
   );
   return {
@@ -128,6 +133,7 @@ function setup(params: {
     partRepository,
     emailService,
     metrics,
+    sagaMetrics,
     runAfterCommit: async () => {
       for (const fn of afterCommit) await fn();
     },
@@ -332,7 +338,7 @@ describe('ProcessSagaEventUseCase', () => {
   it('falha na execução: devolve as peças, cancela a OS e pede o estorno', async () => {
     const saga = makeSaga(SagaStep.EXECUTING);
     const part = makePart(3);
-    const { useCase, orderRepository } = setup({
+    const { useCase, orderRepository, sagaMetrics, runAfterCommit } = setup({
       saga,
       order: makeOrder(ServiceOrderStatus.IN_PROGRESS),
       part,
@@ -356,6 +362,15 @@ describe('ProcessSagaEventUseCase', () => {
         }),
       }),
     ]);
+
+    expect(sagaMetrics.recordTransition).not.toHaveBeenCalled();
+    await runAfterCommit();
+    expect(sagaMetrics.recordTransition).toHaveBeenCalledWith({
+      from: SagaStatus.RUNNING,
+      to: SagaStatus.COMPENSATING,
+      trigger: 'execution.job.failed',
+      startedAt: saga.createdAt,
+    });
   });
 
   it('devolução de peça apagada do catálogo segue sem ela', async () => {
