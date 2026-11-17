@@ -80,6 +80,10 @@ export function startTracing(): void {
         // Latência de rota HTTP e tempo de query no Postgres saem daqui,
         // sem uma linha de código nos casos de uso.
         '@opentelemetry/instrumentation-fs': { enabled: false },
+        // Desligada: ela cria o span de publicação a partir do contexto ativo e
+        // sobrescreve o traceparent gravado no outbox. Os spans de publicação e
+        // consumo vêm de infrastructure/messaging/message-tracing.ts.
+        '@opentelemetry/instrumentation-amqplib': { enabled: false },
         '@opentelemetry/instrumentation-pino': {
           // Injeta trace_id e span_id em toda linha de log — é isto que liga
           // um log ao trace da requisição que o gerou.

@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { ExpireSagaDeadlinesUseCase } from '@application/use-cases/saga/expire-saga-deadlines.use-case';
 import { sagaConfig } from '@infrastructure/config/saga.config';
+import { suppressTracing } from '@opentelemetry/core';
+import { context } from '@opentelemetry/api';
 
 /**
  * Roda a varredura de prazos da saga periodicamente. Independe do RabbitMQ:
@@ -41,7 +43,11 @@ export class SagaDeadlineScheduler
     if (this.running) return;
     this.running = true;
     try {
-      await this.expireDeadlines.execute();
+      // Varredura a cada poucos segundos: sem isto, cada uma vira um trace vazio.
+      // Um prazo vencido começa um trace novo na publicação do comando.
+      await context.with(suppressTracing(context.active()), () =>
+        this.expireDeadlines.execute(),
+      );
     } catch (error) {
       this.logger.error(
         `Saga deadline sweep failed: ${error instanceof Error ? error.message : String(error)}`,

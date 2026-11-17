@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { messageLogFields } from './message-log-context';
 
 import type { Params } from 'nestjs-pino';
 import type { IncomingMessage, ServerResponse } from 'http';
@@ -56,6 +57,9 @@ export const loggingConfig = (): Params => ({
       res.setHeader('x-request-id', id);
       return id;
     },
+
+    // sagaId, orderId e tipo da mensagem em toda linha escrita por um consumidor.
+    mixin: messageLogFields,
 
     customProps: () => ({
       service: process.env.OTEL_SERVICE_NAME ?? 'oficina-backend',

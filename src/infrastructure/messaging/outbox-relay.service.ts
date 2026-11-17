@@ -8,6 +8,8 @@ import { IMessagePublisher } from '@domain/services/message-publisher.interface'
 import { PrismaService } from '@infrastructure/database/prisma/prisma.service';
 import { rabbitmqConfig } from '@infrastructure/config/rabbitmq.config';
 import { SagaEnvelope } from '@domain/messaging/saga-message';
+import { suppressTracing } from '@opentelemetry/core';
+import { context } from '@opentelemetry/api';
 
 interface PendingRow {
   id: string;
@@ -71,7 +73,10 @@ export class OutboxRelayService
     if (this.running) return;
     this.running = true;
     try {
-      await this.publishPending();
+      // A rodada consulta o banco a cada segundo: sem isto, cada uma vira um trace vazio.
+      await context.with(suppressTracing(context.active()), () =>
+        this.publishPending(),
+      );
     } catch (error) {
       this.logger.error(`Outbox relay round failed: ${describe(error)}`);
     } finally {
