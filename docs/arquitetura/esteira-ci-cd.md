@@ -68,6 +68,7 @@ A primeira análise da `main` olha o repositório inteiro, inclusive workflows, 
 | Dockerfile | Container sem root | `USER node` |
 | Manifestos k8s | Sem token da API do Kubernetes nos pods | `automountServiceAccountToken: false` |
 | Manifestos k8s | Limite de memória em todo container | `resources.limits.memory`, inclusive no job de migração |
+| Manifestos k8s | Limite de disco temporário em todo container (regra `kubernetes:S6870`, nota de segurança) | `resources.requests/limits.ephemeral-storage`: sem ele, um container pode encher o disco do nó e derrubar os outros |
 | Código | Aleatório seguro | `crypto.randomInt`/`randomUUID`, nunca `Math.random` |
 
 Os `docker-compose*.yml` ficam fora da análise (`sonar.exclusions`): são só para desenvolvimento local e têm senhas fixas de propósito.

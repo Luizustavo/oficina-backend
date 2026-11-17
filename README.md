@@ -77,7 +77,7 @@ k3s (Kubernetes leve, mas 100% real) roda numa única EC2 em vez de usar EKS ger
 2. docker build/push   → imagem da API publicada no ECR
 3. kubectl apply        → namespace, ConfigMap e Secret (uma vez, manual)
 4. Job de migração      → prisma migrate deploy contra o RDS
-5. Deployment/Service/HPA → aplicação no ar, escalando de 2 a 6 réplicas
+5. Deployment/Service/HPA → aplicação no ar, escalando de 1 a 3 réplicas
 ```
 
 Os passos 2–5 são automatizados pelo pipeline de CI/CD (`.github/workflows/cd-production.yml`) a cada push em `main`.
