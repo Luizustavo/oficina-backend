@@ -374,7 +374,7 @@ Na Fase 4 o painel ganhou a página **Saga e microsserviços**, e a política de
 
 ## Vídeo demonstrativo
 
-**Fase 4:** LINK_DO_VIDEO — fluxo completo de uma OS pelos três serviços, a saga com falhas e compensações, deploy automatizado com validação de testes, e o rastreamento distribuído no New Relic.
+**Fase 4:** https://youtu.be/XHv-UubNEV8 — fluxo completo de uma OS pelos três serviços, a saga com falhas e compensações, deploy automatizado com validação de testes, e o rastreamento distribuído no New Relic.
 
 ---
 
