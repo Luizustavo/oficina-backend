@@ -1,6 +1,6 @@
 # Diagramas de Sequência
 
-Os dois fluxos exigidos pela Fase 3: **autenticação** e **abertura de ordem de serviço**.
+Os fluxos da Fase 3 (**autenticação** e **abertura de ordem de serviço**) e, da Fase 4, a **saga** atravessando os três serviços: o [caminho feliz](#4-saga-caminho-feliz-s1) e a [falha na execução com estorno](#5-saga-falha-na-execução-com-estorno-s4).
 
 ---
 
@@ -281,3 +281,86 @@ stateDiagram-v2
 ```
 
 Itens só podem ser adicionados em `RECEIVED`, `IN_DIAGNOSIS` e `AWAITING_APPROVAL` — depois de aprovado, o orçamento está fechado.
+
+---
+
+## 4. Saga: caminho feliz (S1)
+
+O OS Service orquestra: manda **comandos** (`saga.commands`) e reage aos **eventos** (`saga.events`). Toda mensagem é gravada no outbox na mesma transação da mudança e publicada pelo relay; o RabbitMQ aparece como uma linha só para não poluir o desenho.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Equipe
+    actor Cliente
+    participant MP as Mercado Pago
+    participant OS as OS Service
+    participant MQ as RabbitMQ
+    participant BILL as Billing Service
+    participant EXEC as Execution Service
+
+    Equipe->>OS: PATCH /service-orders/:id/request-approval
+    Note over OS: OS → AWAITING_APPROVAL<br/>saga criada, comando no outbox
+    OS-)MQ: billing.budget.create
+    MQ-)BILL: billing.budget.create
+    BILL-)MQ: billing.budget.created
+    MQ-)OS: billing.budget.created
+    Cliente->>BILL: POST /api/billing/budgets/:id/approve (token do CPF)
+    BILL->>MP: cria o checkout (idempotência = id do orçamento)
+    BILL-)MQ: billing.budget.approved
+    MQ-)OS: billing.budget.approved
+    Note over OS: reserva as peças<br/>OS → AWAITING_PAYMENT
+    Cliente->>MP: paga no checkout
+    MP->>BILL: webhook (assinatura x-signature)
+    BILL->>MP: consulta o pagamento
+    BILL-)MQ: billing.payment.confirmed
+    MQ-)OS: billing.payment.confirmed
+    Note over OS: OS → PAID
+    OS-)MQ: execution.job.enqueue
+    MQ-)EXEC: execution.job.enqueue
+    EXEC-)MQ: execution.job.queued
+    Equipe->>EXEC: start-diagnosis · start-repair · finish (mecânico)
+    EXEC-)MQ: execution.job.started · execution.job.completed
+    MQ-)OS: started · completed
+    Note over OS: OS → IN_PROGRESS → COMPLETED<br/>saga COMPLETED
+    Equipe->>OS: PATCH /service-orders/:id/deliver
+    Note over OS: OS → DELIVERED
+```
+
+## 5. Saga: falha na execução com estorno (S4)
+
+A compensação mais cara: a OS já foi paga quando o mecânico registra a falha. A saga devolve as peças, cancela a OS e pede o estorno.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Mecanico as Mecânico
+    participant EXEC as Execution Service
+    participant MQ as RabbitMQ
+    participant OS as OS Service
+    participant BILL as Billing Service
+    participant MP as Mercado Pago
+
+    Note over OS: OS em PAID ou IN_PROGRESS
+    Mecanico->>EXEC: PATCH /api/execution/jobs/:id/fail (PART_UNAVAILABLE)
+    Note over EXEC: job → FAILED
+    EXEC-)MQ: execution.job.failed
+    MQ-)OS: execution.job.failed
+    Note over OS: devolve as peças ao estoque<br/>OS → CANCELED · saga COMPENSATING
+    OS-)MQ: billing.payment.refund (EXECUTION_FAILED)
+    MQ-)BILL: billing.payment.refund
+    BILL->>MP: estorno (idempotência = id do pagamento)
+    alt estorno aceito
+        BILL-)MQ: billing.payment.refunded
+        MQ-)OS: billing.payment.refunded
+        Note over OS: saga COMPENSATED
+    else Mercado Pago indisponível
+        Note over BILL: retentativa em 5 s, 30 s e 2 min,<br/>depois DLQ e alerta no New Relic
+    else estorno recusado
+        BILL-)MQ: billing.payment.refund-failed
+        MQ-)OS: billing.payment.refund-failed
+        Note over OS: saga FAILED: exige intervenção
+    end
+```
+
+No sandbox, a API de estornos exige as credenciais de produção da conta ativadas; sem isso o comando segue pelo caminho da DLQ, onde pode ser reprocessado depois ([operação da mensageria](operacao-da-mensageria.md)).
