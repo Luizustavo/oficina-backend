@@ -187,10 +187,46 @@ jobs:
       - run: npm run prisma:migrate:deploy
       - run: npm run test:e2e
 
+  bdd-tests:
+    name: BDD
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: oficina_test_db
+          POSTGRES_USER: oficina_user
+          # Banco descartável do CI: sem senha (trust), em vez de uma senha fixa no código.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U oficina_user -d oficina_test_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      DATABASE_URL: postgresql://oficina_user@localhost:5432/oficina_test_db
+      JWT_SECRET: ci-secret
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      JWT_REFRESH_EXPIRES_IN: 7d
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run prisma:generate
+      - run: npm run prisma:migrate:deploy
+      - run: npm run test:bdd
+
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint, unit-tests, quality, integration-tests, e2e-tests]
+    needs: [lint, unit-tests, quality, integration-tests, e2e-tests, bdd-tests]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

@@ -14,6 +14,7 @@ npm test                                        # Unit tests (rootDir: src, matc
 npm test -- --testPathPattern=customer          # Run tests matching a pattern
 npm test -- --coverage                          # Unit tests with coverage (threshold: 80%)
 npm run test:e2e                                # E2E tests (test/*.e2e-spec.ts)
+npm run test:bdd                                # BDD (jest-cucumber): test/bdd/features/*.feature — need a live Postgres
 npm run test:int                                # Integration tests (test/**/*.integration-spec.ts) — need a live Postgres
 
 # Linting
@@ -114,6 +115,10 @@ src/
 - **Concurrency:** the executor reads the saga with `ISagaRepository.lockCurrentByOrderId` (`SELECT ... FOR UPDATE`), so two events for the same saga (different replicas, or an event racing a timeout) are applied one after the other and the second one sees the new state. Never read the saga without the lock inside the executor; `test/integration/saga.integration-spec.ts` ("trava da saga") fails without it.
 - **Timeouts:** `sagaConfig()` (`SAGA_APPROVAL_TIMEOUT_SECONDS`, `SAGA_PAYMENT_TIMEOUT_SECONDS`, via the `SagaSettings` token) sets `deadlineAt` when entering approval/payment. `SagaDeadlineScheduler` (`infrastructure/saga/`, every `SAGA_SWEEP_INTERVAL_SECONDS`, 0 disables) runs `ExpireSagaDeadlinesUseCase`, which sends the internal `saga.approval.timeout` / `saga.payment.timeout` event of the current step through the executor.
 - **Query:** `GET /api/service-orders/:id/saga` (`GetServiceOrderSagaUseCase`, `@CustomerScope({ order: 'id' })`) returns the current saga and its `SagaStepLog` history.
+
+### BDD
+
+`test/bdd/features/fluxo-completo-da-os.feature` (Gherkin in Portuguese, `# language: pt`) describes the complete order flow: the happy path from opening to delivery and the execution failure with refund and parts returned. `test/bdd/fluxo-completo-da-os.steps.ts` binds the steps with `jest-cucumber`'s `autoBindSteps` (steps match by text, so each step is defined once). It boots the real `AppModule` against Postgres: staff actions go through HTTP with a real JWT, and the Billing/Execution answers are delivered to the real `SagaEventsConsumer.handle()` as `os.saga-events` envelopes, so the registry, idempotency and transaction run exactly as with RabbitMQ. Commands sent are asserted in `outbox_messages`. Runs in CI as the `BDD` job.
 
 ### Import Ordering
 

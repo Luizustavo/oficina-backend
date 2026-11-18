@@ -13,9 +13,10 @@ flowchart LR
         Q[Quality<br/>SonarCloud]
         I[Integration Tests]
         E[E2E Tests]
+        D[BDD<br/>fluxo completo da OS]
         B[Build<br/>imagem Docker]
         U --> Q
-        L & Q & I & E --> B
+        L & Q & I & E & D --> B
     end
     CI -->|todos verdes| M[Merge na main]
     M --> CI2[ci.yml roda de novo na main]
@@ -38,6 +39,7 @@ Roda em todo Pull Request e em todo push para `main`.
 | `Quality (SonarCloud)` | Envia o código e o lcov ao SonarCloud e **espera o Quality Gate** (`sonar.qualitygate.wait=true`) | O Quality Gate reprova: cobertura do código novo < 80%, bugs, vulnerabilidades, *security hotspots* não revisados ou duplicação acima do limite |
 | `Integration Tests` | Testes contra um Postgres de verdade (container de serviço do Actions) | Um teste falha |
 | `E2E Tests` | Sobe a API e faz requisições HTTP | Um teste falha |
+| `BDD` | Roda o fluxo completo da OS descrito em Gherkin (`test/bdd/features`), só no `oficina-backend` | Um cenário falha |
 | `Build` | `npm run build` e `docker build` (sem push) | O código não compila ou a imagem não builda |
 
 O `Build` só roda se todos os outros passarem.
@@ -107,7 +109,7 @@ Os jobs de integração/E2E mudam conforme o banco do serviço (Postgres para Bi
 Em todos os repositórios de serviço:
 
 - Push direto na `main` é recusado: toda mudança entra por Pull Request.
-- O PR só pode ser mergeado com os checks obrigatórios verdes: `Lint`, `Unit Tests (coverage)`, `Quality (SonarCloud)`, `Integration Tests`, `E2E Tests` e `Build`.
+- O PR só pode ser mergeado com os checks obrigatórios verdes: `Lint`, `Unit Tests (coverage)`, `Quality (SonarCloud)`, `Integration Tests`, `E2E Tests`, `BDD` (no `oficina-backend`) e `Build`.
 - A regra vale também para o administrador (`enforce_admins`).
 
 Para conferir:
