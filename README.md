@@ -466,6 +466,30 @@ A cada transição, o cliente recebe um e-mail automático, enviado para o e-mai
 
 ---
 
+## Fluxo completo em BDD
+
+O fluxo completo da OS está descrito em Gherkin, em português, em [`test/bdd/features/fluxo-completo-da-os.feature`](test/bdd/features/fluxo-completo-da-os.feature), e roda com `npm run test:bdd` (`jest-cucumber`) e no job `BDD` do CI. São dois cenários: o caminho feliz, da abertura à entrega, e a falha na execução depois do pagamento, com estorno e peças de volta ao estoque.
+
+A aplicação sobe inteira contra o Postgres: as ações da equipe vão pela API HTTP, com token de verdade, e as respostas do Billing e do Execution entram pelo consumidor real da fila `os.saga-events`, como chegariam pelo RabbitMQ. Os comandos que a saga envia são conferidos no outbox.
+
+```gherkin
+Cenário: Caminho feliz, da abertura à entrega
+  Dado um cliente com um veículo e a peça "Filtro de óleo" com 10 unidades em estoque
+  E uma OS aberta com um serviço e 2 peças, já em diagnóstico
+  Quando a equipe pede a aprovação do orçamento
+  Então a OS fica "AWAITING_APPROVAL"
+  E o comando "billing.budget.create" é enviado
+  Quando o Billing informa "billing.budget.created"
+  E o Billing informa "billing.budget.approved"
+  Então a OS fica "AWAITING_PAYMENT"
+  E o estoque da peça fica em 8
+  …
+  Quando a equipe entrega o veículo
+  Então a OS fica "DELIVERED"
+```
+
+---
+
 ## Análise de Qualidade e Segurança (SonarQube)
 
 No CI, a análise roda no **SonarCloud** a cada Pull Request (job `Quality (SonarCloud)`), e um Quality Gate reprovado bloqueia o merge. Veja [docs/arquitetura/esteira-ci-cd.md](docs/arquitetura/esteira-ci-cd.md).
