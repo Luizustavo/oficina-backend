@@ -1,34 +1,81 @@
-# Oficina Backend — Tech Challenge SOAT Fase 3
+# Oficina — OS Service · Tech Challenge SOAT Fase 4
 
-Sistema de gerenciamento de ordens de serviço para uma oficina mecânica, desenvolvido com **NestJS**, **Prisma**, **PostgreSQL** e arquitetura **Clean Architecture + DDD**.
+[![Quality Gate](https://sonarcloud.io/api/project_badges/measure?project=Luizustavo_oficina-backend&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Luizustavo_oficina-backend) [![Cobertura](https://sonarcloud.io/api/project_badges/measure?project=Luizustavo_oficina-backend&metric=coverage)](https://sonarcloud.io/summary/new_code?id=Luizustavo_oficina-backend) [![CI](https://github.com/Luizustavo/oficina-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/Luizustavo/oficina-backend/actions/workflows/ci.yml)
 
-Este é o repositório da **aplicação**. A infraestrutura vive em três repositórios próprios, cada um com o seu CI/CD:
+Sistema de gestão de ordens de serviço de uma oficina mecânica, dividido em **três microsserviços** que conversam por **RabbitMQ** numa **saga orquestrada**. Este repositório é o **OS Service**: ordem de serviço, clientes, veículos, catálogo e estoque, e o **orquestrador da saga**. NestJS, Prisma e PostgreSQL, em Clean Architecture + DDD.
 
-| Repositório | Conteúdo |
+| Repositório | Papel | Banco |
+|---|---|---|
+| **oficina-backend** (este) | **OS Service**: ordem de serviço, clientes, estoque; orquestra a saga. Também guarda a documentação da arquitetura (RFCs, ADRs, contratos) | PostgreSQL (`oficina_db`) |
+| [oficina-billing-service](https://github.com/Luizustavo/oficina-billing-service) | **Billing Service**: orçamento, aprovação do cliente, pagamento pelo Mercado Pago e estorno | PostgreSQL (`billing_db`) + Redis |
+| [oficina-execution-service](https://github.com/Luizustavo/oficina-execution-service) | **Execution Service**: fila de execução, diagnóstico e reparo | MongoDB |
+| [oficina-lambda-auth](https://github.com/Luizustavo/oficina-lambda-auth) | Lambda de login por CPF (parte do OS Service, [ADR-014](docs/adr/adr-014-lambda-de-autenticacao-e-a-tabela-customers.md)) e API Gateway | — |
+| [oficina-infra-k8s](https://github.com/Luizustavo/oficina-infra-k8s) | VPC, EC2 com k3s, ECR, Traefik, RabbitMQ | — |
+| [oficina-infra-database](https://github.com/Luizustavo/oficina-infra-database) | RDS PostgreSQL | — |
+
+Diagrama da arquitetura, fluxo da saga e compensações: [docs/arquitetura/diagrama-de-componentes.md](docs/arquitetura/diagrama-de-componentes.md).
+
+## Ambiente
+
+A infraestrutura é destruída ao final de cada sessão de trabalho para não consumir crédito ([ADR-001](docs/adr/adr-001-k3s-em-ec2-no-lugar-do-eks.md)); o [vídeo de demonstração](#vídeo-demonstrativo) mostra tudo no ar. O endereço do API Gateway muda a cada `apply`; com a infra provisionada:
+
+```bash
+terraform -chdir=infra output -raw api_gateway_url   # no repositório oficina-lambda-auth
+```
+
+| Recurso | Caminho no API Gateway |
 |---|---|
-| **oficina-backend** (este) | Aplicação NestJS, manifestos Kubernetes, documentação arquitetural |
-| [oficina-infra-k8s](https://github.com/Luizustavo/oficina-infra-k8s) | VPC, EC2 com k3s, ECR, alerta de orçamento |
-| [oficina-infra-database](https://github.com/Luizustavo/oficina-infra-database) | RDS PostgreSQL |
-| [oficina-lambda-auth](https://github.com/Luizustavo/oficina-lambda-auth) | Lambda de autenticação por CPF e API Gateway |
+| Swagger do OS Service | `/api/docs` |
+| Swagger do Billing Service | `/api/billing/docs` |
+| Swagger do Execution Service | `/api/execution/docs` |
+| Healthchecks | `/api/health/live`, `/api/billing/health/live`, `/api/execution/health/live` |
+| Painel no New Relic | [Oficina — Tech Challenge Fase 4](https://one.newrelic.com/dashboards/detail/ODUxNTY3NnxWSVp8REFTSEJPQVJEfGRhOjEzNTg0MTQ1) (página *Saga e microsserviços*) |
+| Alertas | Políticas `Oficina — Tech Challenge Fase 3` e `Oficina — Tech Challenge Fase 4 (saga)` ([detalhes](docs/observabilidade.md)) |
 
-## Deploy ativo
+---
 
-| Recurso | Endereço |
-|---|---|
-| **API (porta de entrada)** | `https://dzsca8yk0b.execute-api.sa-east-1.amazonaws.com` — a raiz responde **401** de propósito: toda rota não pública exige token, barrado já no API Gateway |
-| **Swagger** | https://dzsca8yk0b.execute-api.sa-east-1.amazonaws.com/api/docs |
-| **OpenAPI (JSON)** | https://dzsca8yk0b.execute-api.sa-east-1.amazonaws.com/api/docs-json |
-| **Healthcheck** | https://dzsca8yk0b.execute-api.sa-east-1.amazonaws.com/api/health/live |
-| **Dashboards** | [New Relic — Tech Challenge Fase 3](https://one.newrelic.com/dashboards/detail/ODUxNTY3NnxWSVp8REFTSEJPQVJEfGRhOjEzMTc2NzI5) — 20 widgets em 2 páginas |
-| **Alertas** | Política `Oficina — Tech Challenge Fase 3`, 5 condições ativas ([detalhes](docs/observabilidade.md#alertas)) |
+## Saga Pattern
 
-> A infraestrutura é destruída ao final de cada sessão de trabalho para não consumir crédito (ver [ADR-001](docs/adr/adr-001-k3s-em-ec2-no-lugar-do-eks.md)). Enquanto estiver fora, os endereços acima não respondem, e o identificador do API Gateway muda a cada novo `apply`. Para obter o endereço atual:
->
-> ```bash
-> terraform -chdir=infra output -raw api_gateway_url   # no repositório oficina-lambda-auth
-> ```
->
-> O vídeo de demonstração mostra o ambiente no ar.
+### O problema
+
+Uma ordem de serviço atravessa os três serviços: o OS reserva as peças no banco dele, o Billing cobra no dele, o Execution enfileira o reparo no MongoDB. Como cada serviço tem o próprio banco, **não existe uma transação que cubra a OS inteira**: se o pagamento falhar depois de as peças serem reservadas, nenhum banco desfaz sozinho o que o outro já gravou.
+
+### A solução
+
+A saga divide a operação em **uma sequência de transações locais**, cada uma num serviço e no seu banco, ligadas por mensagens. Cada passo, ao terminar, avisa o próximo. Se um passo falha, a saga executa **compensações**: ações de negócio que desfazem o efeito dos passos já concluídos (devolver as peças, cancelar o orçamento, estornar o pagamento).
+
+### Orquestrada, e não coreografada
+
+| | Coreografada | **Orquestrada (a escolhida)** |
+|---|---|---|
+| Quem decide o próximo passo | Cada serviço, reagindo aos eventos dos outros | Um orquestrador central: o **OS Service** |
+| Onde fica a regra do fluxo | Espalhada pelos serviços | Num lugar só, [`service-order-saga.ts`](src/application/saga/service-order-saga.ts), uma função pura testada sem infraestrutura |
+| Estado da operação | Implícito, deduzido dos eventos | Gravado: passo atual, prazo e histórico (`saga_instances`, `saga_step_logs`), consultável em `GET /api/service-orders/:id/saga` |
+| Acoplamento entre Billing e Execution | Precisam conhecer os eventos um do outro | Nenhum: cada um só responde aos comandos do OS |
+
+**Por que orquestrada.** O fluxo da OS é **sequencial** (orçamento → aprovação → pagamento → execução) e **cada passo tem uma compensação diferente** (cancelar orçamento, devolver peças, estornar). Numa coreografia essa lógica ficaria distribuída e difícil de seguir; com um orquestrador, a regra fica num lugar só, os prazos são controlados por quem conhece o fluxo, e o suporte enxerga em que passo cada OS está. O custo, um ponto central de coordenação, é aceitável porque o OS já é o dono da ordem de serviço. Decisão completa na [ADR-011](docs/adr/adr-011-saga-orquestrada.md).
+
+### Como funciona
+
+O OS manda **comandos** pela exchange `saga.commands`; Billing e Execution respondem com **eventos** em `saga.events`. Contrato completo em [contratos-de-mensagens.md](docs/arquitetura/contratos-de-mensagens.md).
+
+| Passo | Comando do OS | Evento de sucesso | Falha ou prazo vencido | Compensação |
+|---|---|---|---|---|
+| Gerar orçamento | `billing.budget.create` | `billing.budget.created` | `billing.budget.creation-failed` | OS volta para diagnóstico |
+| Aprovação do cliente | — | `billing.budget.approved` (OS reserva as peças) | `billing.budget.rejected` ou prazo de aprovação | `billing.budget.cancel`; OS cancelada |
+| Pagamento | — | `billing.payment.confirmed` | `billing.payment.failed` ou prazo de pagamento | `billing.budget.cancel`; peças devolvidas; OS cancelada |
+| Execução | `execution.job.enqueue` | `execution.job.started` → `completed` | `execution.job.failed` | `billing.payment.refund` (estorno); peças devolvidas; OS cancelada |
+| Cancelamento pela equipe | conforme o passo | — | — | cancela orçamento, job (`execution.job.cancel`) e estorna se já paga |
+
+### O que garante que nada se perde
+
+- **Outbox transacional**: a mensagem é gravada no mesmo commit da mudança de estado e publicada depois por um relay. Não existe "mudou o banco, mas a mensagem não saiu".
+- **Consumo idempotente**: cada mensagem processada fica registrada pelo `messageId`; uma repetida é confirmada sem efeito.
+- **Retentativa e fila de mortas**: falha transitória tenta de novo em 5 s, 30 s e 2 min; depois vai para a DLQ, gera alerta e pode ser reprocessada ([operação da mensageria](docs/arquitetura/operacao-da-mensageria.md)).
+- **Prazos**: aprovação e pagamento têm prazo; vencido, a saga compensa sozinha.
+- **Concorrência**: a saga é lida com trava (`SELECT … FOR UPDATE`), então dois eventos da mesma OS nunca são aplicados ao mesmo tempo.
+
+Os sete cenários (caminho feliz, recusa, pagamento recusado, falha na execução, prazo vencido, serviço fora do ar, mensagem duplicada) rodam com `scripts/demo-saga.sh s1` … `s7`.
 
 ---
 
@@ -61,28 +108,28 @@ src/
 
 ### Infraestrutura provisionada
 
-| Componente | Recurso AWS | Função |
+| Componente | Recurso | Função |
 |---|---|---|
-| Nó Kubernetes | EC2 t3.small rodando **k3s** | Roda os pods da aplicação (Deployment, Service, HPA) |
-| Banco de dados | RDS PostgreSQL (`db.t4g.micro`) | Persistência, em subnet privada, acesso só do nó k3s |
-| Registro de imagens | ECR | Guarda a imagem Docker publicada pelo CI/CD |
+| Nó Kubernetes | EC2 `c7i-flex.large` rodando **k3s** | Os três serviços, o RabbitMQ, o MongoDB e o Redis, cada um no seu namespace |
+| Entrada | API Gateway + Traefik (Ingress do k3s, porta 30080) | O gateway recebe tudo; o Traefik entrega `/api`, `/api/billing` e `/api/execution` ao serviço certo ([ADR-015](docs/adr/adr-015-traefik-como-ingress.md)) |
+| Banco relacional | RDS PostgreSQL 16 | `oficina_db` (OS) e `billing_db` (Billing), um usuário por serviço, em subnet privada |
+| Registro de imagens | ECR | Uma imagem por serviço, publicada pelo CD de cada um |
 | Alerta de custo | AWS Budgets | Avisa por e-mail se o gasto do mês passar de 50%/100% do limite |
 
-k3s (Kubernetes leve, mas 100% real) roda numa única EC2 em vez de usar EKS gerenciado — o control plane do EKS cobra taxa fixa por hora sem free tier, enquanto a EC2 e o RDS escolhidos são elegíveis ao free tier de conta nova. Isso mantém o custo em ~US$0,04–0,07/hora em vez de ~US$0,37/hora. Detalhes e justificativa completa no repositório [`oficina-infra-k8s`](https://github.com/Luizustavo/oficina-infra-k8s).
+k3s (Kubernetes conformante) roda numa única EC2 em vez do EKS gerenciado, cujo control plane cobra taxa fixa por hora ([ADR-001](docs/adr/adr-001-k3s-em-ec2-no-lugar-do-eks.md)). Detalhes no repositório [`oficina-infra-k8s`](https://github.com/Luizustavo/oficina-infra-k8s).
 
 ### Fluxo de deploy
 
 ```
-1. terraform apply     → provisiona VPC, EC2 (k3s), RDS, ECR, alerta de orçamento
-2. docker build/push   → imagem da API publicada no ECR
-3. kubectl apply        → namespace, ConfigMap e Secret (uma vez, manual)
-4. Job de migração      → prisma migrate deploy contra o RDS
-5. Deployment/Service/HPA → aplicação no ar, escalando de 1 a 3 réplicas
+1. terraform apply (infra-k8s → database → lambda)  → VPC, EC2/k3s, RabbitMQ, RDS, Lambdas e API Gateway
+2. Secrets aplicados uma vez por sessão (banco, JWT, RabbitMQ)
+3. merge na main de um serviço → CI (lint, testes, SonarCloud, build) → CD:
+   imagem no ECR → bootstrap do banco → migração → Deployment/Service/Ingress/HPA → rollout
 ```
 
-Os passos 2–5 são automatizados pelo pipeline de CI/CD (`.github/workflows/cd-production.yml`) a cada push em `main`.
+Cada serviço tem o seu `cd-production.yml`; o do OS ainda roda o job que cria os usuários do banco (`os_user` e `auth_reader`).
 
-### Diagrama da arquitetura
+### Camadas do OS Service
 
 Como uma requisição atravessa as camadas, e onde cada regra mora:
 
@@ -289,8 +336,12 @@ Instrumentação com **OpenTelemetry**, exportando para o **New Relic**. Por ser
 | Métricas de negócio | Transições de ordem de serviço e tempo em cada status |
 | Métricas de integração | Falhas e latência das chamadas externas |
 | Infraestrutura | CPU e memória dos pods, via integração Kubernetes |
+| **Trace distribuído (Fase 4)** | Uma requisição e as mensagens que ela gera viram **um trace só** atravessando OS, Billing e Execution pelo RabbitMQ: o contexto do trace é gravado no outbox e continuado no consumo |
+| **Saga (Fase 4)** | Sagas iniciadas, compensações por motivo, como terminam e quanto duram; mensagens na DLQ; pagamentos; fila de execução; `sagaId` e `orderId` em todo log de mensagem |
 
 Dos contadores de transição saem os três painéis exigidos pela Fase 3: volume diário de OS, tempo médio por status e erros de integração. Medir na transição, em vez de varrer a tabela na hora de montar o gráfico, é o que permite ver a oficina em tempo real.
+
+Na Fase 4 o painel ganhou a página **Saga e microsserviços**, e a política de alertas da saga avisa quando uma mensagem cai na DLQ, quando as compensações passam do normal e quando um serviço para de dar sinal de vida.
 
 📖 **Consultas NRQL prontas dos dashboards, alertas e passo a passo de configuração em [`docs/observabilidade.md`](docs/observabilidade.md).**
 
@@ -300,12 +351,16 @@ Dos contadores de transição saem os três painéis exigidos pela Fase 3: volum
 
 | Documento | Conteúdo |
 |---|---|
-| [Diagrama de componentes](docs/arquitetura/diagrama-de-componentes.md) | Visão de nuvem: entrada, computação, dados, observabilidade e entrega |
+| [Diagrama de componentes](docs/arquitetura/diagrama-de-componentes.md) | Arquitetura da Fase 4: os três serviços, bancos, RabbitMQ, fluxo da saga e compensações |
+| [Contratos de mensagens](docs/arquitetura/contratos-de-mensagens.md) | Envelope, topologia do RabbitMQ, comandos e eventos da saga |
+| [Operação da mensageria](docs/arquitetura/operacao-da-mensageria.md) | DLQ, reprocessamento e os cenários S1–S7 |
+| [Esteira de CI/CD](docs/arquitetura/esteira-ci-cd.md) | O pipeline comum aos três serviços e a proteção da `main` |
+| [Subir e derrubar o ambiente](docs/arquitetura/subida-do-ambiente.md) | A ordem completa entre os seis repositórios, os Secrets de cada serviço e as pegadinhas |
 | [Diagramas de sequência](docs/arquitetura/diagramas-de-sequencia.md) | Autenticação por CPF, abertura de ordem, transição de status e máquina de estados |
 | [Modelagem de dados](docs/modelagem-de-dados.md) | Diagrama ER, relacionamentos, justificativa do banco e índices |
 | [Observabilidade](docs/observabilidade.md) | Instrumentação, consultas NRQL dos dashboards e alertas |
 | [RFCs](docs/rfc/) | Escolha da nuvem, do banco e da estratégia de autenticação |
-| [ADRs](docs/adr/) | Oito decisões arquiteturais permanentes |
+| [ADRs](docs/adr/) | Quinze decisões arquiteturais; as da Fase 4 vão da [ADR-009](docs/adr/adr-009-divisao-em-microsservicos.md) (divisão em microsserviços) à [ADR-015](docs/adr/adr-015-traefik-como-ingress.md) |
 
 Índice completo em [`docs/`](docs/README.md).
 
@@ -314,13 +369,12 @@ Dos contadores de transição saem os três painéis exigidos pela Fase 3: volum
 ## Documentação da API
 
 - **Collection completa (OpenAPI, importável no Postman/Insomnia)**: [`docs/openapi.json`](docs/openapi.json) — veja [`docs/openapi.md`](docs/openapi.md) para instruções de importação. Versionada no repositório, não depende da infraestrutura estar no ar.
-- **Swagger ao vivo**: https://dzsca8yk0b.execute-api.sa-east-1.amazonaws.com/api/docs — enquanto a infraestrutura estiver provisionada
+- **Swagger ao vivo**: `/api/docs` no API Gateway, enquanto a infraestrutura estiver provisionada (ver [Ambiente](#ambiente)). Billing e Execution têm o seu em `/api/billing/docs` e `/api/execution/docs`.
 - **Swagger local**: http://localhost:3000/api/docs (com `npm run start:dev`)
-- **Swagger ao vivo**: disponível enquanto a infraestrutura estiver provisionada (veja [`oficina-infra-k8s`](https://github.com/Luizustavo/oficina-infra-k8s)) — pode não responder se a infra tiver sido destruída no momento do acesso
 
 ## Vídeo demonstrativo
 
-_[a gravar — deploy da aplicação, execução do CI/CD, consumo das APIs e escalabilidade automática]_
+**Fase 4:** LINK_DO_VIDEO — fluxo completo de uma OS pelos três serviços, a saga com falhas e compensações, deploy automatizado com validação de testes, e o rastreamento distribuído no New Relic.
 
 ---
 
@@ -369,14 +423,16 @@ npm test -- --coverage
 npm test -- --testPathPattern=customer
 ```
 
-Cobertura atual:
+Cobertura (mínimo de 80%, verificado no CI e no Quality Gate do [SonarCloud](https://sonarcloud.io/summary/new_code?id=Luizustavo_oficina-backend)):
 
 | Métrica | Cobertura |
 |---|---|
-| Statements | ≥ 84% |
-| Branches | ≥ 88% |
-| Functions | ≥ 85% |
-| Lines | ≥ 84% |
+| Statements | 86,9% |
+| Branches | 90,2% |
+| Functions | 87,2% |
+| Lines | 86,9% |
+
+Além dos unitários: `npm run test:int` (Postgres e RabbitMQ de verdade, incluindo a saga e a trava de concorrência) e `npm run test:e2e`.
 
 ---
 
